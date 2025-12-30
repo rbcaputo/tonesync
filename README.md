@@ -212,8 +212,8 @@ E(t) = {1                   T_on <= t <= T_off
 
 Parameters:
 
-* `τ\_a`: attack time constant
-* `τ\_r`: release time constant
+* `τ_a`: attack time constant
+* `τ_r`: release time constant
 
 The are **tens of seconds**, not milliseconds.
 
@@ -229,7 +229,7 @@ E_macro (t) = 0.5 + 0.5 sin(2πf_macro^t)
 
 Where:
 
-* `f\_macro` << 1 Hz (e.g one cycle every 10-30 minutes)
+* `f_macro` << 1 Hz (e.g one cycle every 10-30 minutes)
 
 ---
 
@@ -337,7 +337,7 @@ State:
 Update per sample:
 
 ```
-ϕ_n+1 = ϕ_n +** 2π(f_c/f_s)
+ϕ_n+1 = ϕ_n + 2π(f_c/f_s)
 ```
 
 Output:
@@ -372,7 +372,7 @@ Implemented as:
 
 Same oscillator structure, but:
 
-* `f\_m` << 20 Hz
+* `f_m` << 20 Hz
 * Output range usually normalized to [-1, 1]
 
 Common waveforms:
