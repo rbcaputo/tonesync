@@ -44,7 +44,7 @@
       _sampleRate = sampleRate;
     }
 
-    public void ConfigureLayer(int layerIndex, LayerConfig config)
+    public void ConfigureLayer(int layerIndex, LayerConfiguration config)
     {
       if (!config.IsValid())
         throw new ArgumentException("Invalid layer configuration", nameof(config));
@@ -56,7 +56,7 @@
       layer.Weight = config.Weight;
     }
 
-    public void ConfigureLayers(LayerConfig[] configs)
+    public void ConfigureLayers(LayerConfiguration[] configs)
     {
       ArgumentNullException.ThrowIfNull(configs);
 

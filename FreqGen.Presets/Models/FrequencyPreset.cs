@@ -28,7 +28,7 @@
     /// <summary>
     /// Layer configurations for this preset.
     /// </summary>
-    public required LayerConfiguration[] Layers { get; init; }
+    public required LayerConfig[] Layers { get; init; }
 
     /// <summary>
     /// Recommended listening duration.
@@ -43,7 +43,7 @@
     /// <summary>
     /// Convert all layers to Core LayerConfig array.
     /// </summary>
-    public Core.LayerConfig[] ToLayerConfigs() =>
+    public Core.LayerConfiguration[] ToLayerConfigs() =>
       [.. Layers.Select(l => l.ToLayerConfig())];
 
     /// <summary>

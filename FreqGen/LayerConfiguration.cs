@@ -4,7 +4,7 @@
   /// Configuration data for a single audio layer.
   /// Immutable value type for thread-safe parameter passing.
   /// </summary>
-  public readonly struct LayerConfig
+  public readonly struct LayerConfiguration
   {
     /// <summary>
     /// Carrier frequency in Hz (typically 20-20000 Hz for therapy audio).
@@ -30,7 +30,7 @@
     /// <summary>
     /// Create a simple unmodulated carrier.
     /// </summary>
-    public static LayerConfig PureTone(float carrierHz, float weight = 1f) =>
+    public static LayerConfiguration PureTone(float carrierHz, float weight = 1f) =>
       new()
       {
         CarrierHz = carrierHz,
@@ -42,7 +42,7 @@
     /// <summary>
     /// Create an amplitude-modulated carrier.
     /// </summary>
-    public static LayerConfig ModulatedTone(
+    public static LayerConfiguration ModulatedTone(
       float carrierHz,
       float modulationHz,
       float modulationDepth,

@@ -2,9 +2,9 @@
 {
   /// <summary>
   /// Configuration for a single layer in a preset.
-  /// Maps to FreqGen.Core.LayerConfig.
+  /// Maps to FreqGen.Core.LayerConfiguration.
   /// </summary>
-  public sealed record LayerConfiguration
+  public sealed record LayerConfig
   {
     /// <summary>
     /// Carrier frequency in Hz.
@@ -34,7 +34,7 @@
     /// <summary>
     /// Convert to Core LayerConfig.
     /// </summary>
-    public Core.LayerConfig ToLayerConfig() =>
+    public Core.LayerConfiguration ToLayerConfig() =>
       new()
       {
         CarrierHz = CarrierHz,
@@ -43,7 +43,7 @@
         Weight = Weight,
       };
 
-    public static LayerConfiguration PureTone(
+    public static LayerConfig PureTone(
       float frequency,
       float weight = 1f,
       string? description = null
@@ -59,7 +59,7 @@
     /// <summary>
     /// Create a modulated layer for brainwave entrainment.
     /// </summary>
-    public static LayerConfiguration BrainwaveLayer(
+    public static LayerConfig BrainwaveLayer(
       float carrierHz,
       float brainwaveHz,
       float depth = 0.8f,
