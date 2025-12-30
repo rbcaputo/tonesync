@@ -24,11 +24,9 @@ Important: **no modulation exists in the waveform itself.** The beat is a **neur
 
 ## Solfeggio Frequencies (Cultural/Numerological)
 
-
-
 | Named Frequency | Claimed meaning | Actual Use | Presentation | Envelope | Core Math (Simplified) |
 |-----------------|-----------------|------------|--------------|----------|------------------------|
-| 396 Hz | "Fear release" | Carrier tone | Pad/drone | Long attack \& release  `x(t)=A(t).sin(2π.396t)` |
+| 396 Hz | "Fear release" | Carrier tone | Pad/drone | Long attack & release | `x(t)=A(t).sin(2π.396t)` |
 | 417 Hz | "Change" | Carrier tone | AM or ambient layer | Slow macro fade | Same as above |
 | 528 Hz | "DNA repair" | Carrier tone | AM pad | Sine AM 4-10 Hz | `sin(2π.528t).(1+α.sin(2πf_m t))` |
 | 639 Hz | "Connection" | Carrier tone | Harmonic stack | ADSR | Sum of sines |
@@ -38,8 +36,6 @@ Important: **no modulation exists in the waveform itself.** The beat is a **neur
 ---
 
 ## Isochronic Tones (Hard Modulation)
-
-
 
 | Category | Target Frequency | Presentation | Envelope | Core Math (Simplified) |
 |----------|------------------|--------------|----------|------------------------|
