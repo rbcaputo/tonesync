@@ -82,7 +82,7 @@ This works more through **mechanical sensation** than hearing.
   * Stability over time
 * The math is trivial; the perception design is not
 
-**If you strip away labels, every one of these systems reduces to:**
+If we strip away labels, every one of these systems reduces to:
 `A stable carrier + slow time-domain modulation + gentle transitions`
 
 ---
@@ -91,7 +91,7 @@ This works more through **mechanical sensation** than hearing.
 
 Every signal we care about can be modeled as:
 
-```
+```mathematics
 x(t) = E(t) i=1∑N w_i C_i (t) M_i (t)
 ```
 
@@ -103,7 +103,7 @@ Where:
 * `w_i` = layer weights
 * `N` = number of layers
 
-This alone already subsumes **AM tones, binaurals, isochronics, drones, pads, noise beds.**
+This alone already subsumes **AM tones**, **binaurals**, **isochronics**, **drones**, **pads**, **noise beds**.
 
 ---
 
@@ -113,7 +113,7 @@ A carrier is any audible waveform.
 
 ### 2.1 Pure sine carrier
 
-```
+```mathematics
 C(t) = sin(2πf_c t + ϕ)
 ```
 
@@ -126,7 +126,7 @@ Parameters:
 
 ### 2.2 Harmonic carrier (preferred in practice)
 
-```
+```mathematics
 C(t) = k=1∑K a_k sin(2πkf_c t)
 ```
 
@@ -140,11 +140,11 @@ Why this matters:
 
 ## 3. Modulation Model
 
-This is where the *meaningful* frequencies live.
+This is where the **meaningful** frequencies live.
 
 ### 3.1 Amplitude modulation (smooth)
 
-```
+```mathematics
 M(t) = 1 + αsin(2πf_m t)
 ```
 
@@ -159,7 +159,7 @@ This is our **default** modulator.
 
 ### Isochronic (hard gating)
 
-```
+```mathematics
 M(t) = gate(f_m, d)
 ```
 
@@ -176,18 +176,19 @@ In practice, we soften this is low-pass filter or smoothstep.
 
 Left:
 
-```
+```mathematics
 x_L(t) = sin(2πf_L t)
 ```
 
 Right:
 
-```
+```mathematics
 x_R(t) = sin(2πf_R t)
 ```
 
 Perceived beat:
-```
+
+```mathematics
 f_b = |f_L - f_R|
 ```
 
@@ -204,7 +205,7 @@ No serious system omits this.
 
 ### 4.1 Exponential fade-in/fade-out
 
-```
+```mathematics
        |1 - e^-t/τ_a        t < T_on
 E(t) = {1                   T_on <= t <= T_off
        |e^-(t-T_off)/τ_r    t > T_off
@@ -223,7 +224,7 @@ The are **tens of seconds**, not milliseconds.
 
 We let the amplitude slowly drift over minutes:
 
-```
+```mathematics
 E_macro (t) = 0.5 + 0.5 sin(2πf_macro^t)
 ```
 
@@ -237,7 +238,7 @@ Where:
 
 Now we compose.
 
-```
+```mathematics
 x(t) = i=1∑N E_i (t) C_i (t) M_i (t)
 ```
 
@@ -250,7 +251,7 @@ Typical layer set:
 
 Noise example:
 
-```
+```mathematics
 C_noise (t) = pink_noise()
 ```
 
@@ -269,7 +270,7 @@ Rules:
 
 Mathematically:
 
-```
+```mathematics
 df/dt ≈ 0
 ```
 
@@ -320,7 +321,7 @@ Every node produces one sample per tick.
 
 ## 2. High-Level DSP Graph (Textual)
 
-```
+```text
 [LFO(s) (modulation params)]-->[Modulator Bank]-->[[Carrier Osc(s)]]-->[Multiplier]-->[Envelope]-->[Layer Output]-->(repeat per layer, then sum)-->[Mixer/Sum]-->[Output]
 ```
 
@@ -336,13 +337,13 @@ State:
 
 Update per sample:
 
-```
+```mathematics
 ϕ_n+1 = ϕ_n + 2π(f_c/f_s)
 ```
 
 Output:
 
-```
+```mathematics
 C[n] = sin(ϕ_n)
 ```
 
@@ -357,7 +358,7 @@ Notes:
 
 Multiple sine oscillators summed:
 
-```
+```mathematics
 C[n] = k=1∑K a_k sin(kϕ_n)
 ```
 
@@ -383,7 +384,7 @@ Common waveforms:
 
 Example output:
 
-```
+```mathematics
 L[n] = sin(2πf_m n/f_s)
 ```
 
@@ -401,7 +402,7 @@ Input:
 
 Transform:
 
-```
+```mathematics
 M[n] = 1 + α.L[n]
 ```
 
@@ -420,7 +421,7 @@ Input:
 
 Transform:
 
-```
+```mathematics
        |1   L[n] > 0
 M[n] = {
        |0   L[n] <= 0
@@ -445,13 +446,13 @@ State machine:
 
 ### 6.1 Attack phase
 
-```
+```mathematics
 E[n] = 1 - e^-n/(𝜏_a f_s)
 ```
 
 ### 6.2 Release phase
 
-```
+```mathematics
 E[n] = e^-(n-n_off)/(𝜏_r/f_s)
 ```
 
@@ -466,7 +467,7 @@ Key property:
 
 This is where the math becomes literal:
 
-```
+```mathematics
 Y[n] = C[n].M[n].E[n]
 ```
 
@@ -484,7 +485,7 @@ This is intentional. No shared state across layers.
 
 Pink or brown noise generator:
 
-```
+```mathematics
 Y_noise [n] = E[n].noise()
 ```
 
@@ -499,13 +500,13 @@ Used to:
 
 Summation with normalization:
 
-```
+```mathematics
 Y_mix [n] = i=1∑N w_i Y_i [n]
 ```
 
 Then:
 
-```
+```mathematics
 Y_out [n] = clamp(Y_mix [n], -1, 1)
 ```
 
@@ -520,14 +521,14 @@ Better:
 
 For binaural layers:
 
-```
+```text
 Carrier --> Envelope --> Left Mixer
 Carrier' --> Envelope --> Right Mixer
 ```
 
 With:
 
-```
+```mathematics
 f_R = f_L + Δf
 ```
 
@@ -553,5 +554,298 @@ This saves CPU and improves stability.
 * No parameter jumps without smoothing
 * All multipliers remain bounded
 * Layers are additive, not interdependent
+
+---
+
+# Application Design
+
+## 1. Mobile Audio Constraints
+
+On Andoid and iOS we do **not** own the audio device. We feed buffers to the OS, on its schedule.
+
+That implies:
+
+* We must be real-time safe
+* No allocations in the audio callback
+* No locks
+* No LINQ, no events, no async inside DSP
+* Deterministic CPU usage per buffer
+
+Our DSP graph must be ***pull-based and stateless per sample**, with minimal mutable state.
+
+---
+
+## 2. Platform Strategy (Important)
+
+With C# .NET 8, the options are:
+
+* **.NET MAUI** for UI
+* **Platform-native audio backends**, bridged into shared DSP code
+
+Typical choices:
+
+* Android → `AudioTrack` (low-latency mode)
+* iOS → `AVAudioEngine`/`AVAudioSourceNode`
+
+Our DSP lives in:
+`Pure .NET Standard-compatible code`
+No platform dependencies. No UI knowledge.
+
+---
+
+## 3. Separation of Concearns (Non-Negotiable)
+
+```text
+[MAUI UI Layer]-->[Control/Params (thread-safe, smoothed)]-->[DSP Engine (pure math)]-->[Platform Audio API]
+```
+
+The DSP engine:
+
+* Knows nothing about Android or iOS
+* Only outputs `float` samples
+* Is driven by a "render buffer" call
+
+---
+
+## 4. DSP Graph --> Object Graph
+
+Translate the DSP node into **small**, **predictable classes**.
+
+**Core interfaces**
+
+```csharp
+public interface IAudioNode
+{
+  float NextSample();
+}
+```
+
+---
+
+## 5. Oscillators (Audio-rate)
+
+```csharp
+public sealed class SineOscillator : IAudioNode
+{
+  private float _phase;
+  private float _phaseIncrement;
+
+  public void SetFrequency(float frequency, float sampleRate)
+  {
+    _phaseIncrement = 2f * Math.PI * frequency / sampleRate;
+  }
+
+  public float NextSample()
+  {
+    var sample = MathF.Sin(_phase);
+    _phase += _phaseIncrement;
+    if (_phase > Math.PI * 2f)
+    {
+      _phase -= Math.PI * 2f;
+    }
+
+    return sample;
+  }
+}
+```
+
+This runs at 44.1k or 48k on mobile.
+
+---
+
+## 6. LFOs (Control-rate)
+
+Do **not** tick LFOs at audio rate.
+Instead:
+
+* Update them every N samples (e.g. every 64)
+* Cache their output
+
+```csharp
+public sealed class Lfo
+{
+  private float _sample;
+  private int _counter;
+
+  public float Sample => _sample;
+
+  public void Tick()
+  {
+    if (++counter % 64 != 0)
+    {
+      return;
+    }
+    _sample = /* compute slow sine */;
+  }
+}
+```
+
+This saves battery and avoids pointless precision.
+
+---
+
+## 7. Modulators (Multipliers)
+
+These are cheap and stateless.
+
+```csharp
+public sealed class AmModulator
+{
+  public float Depth; // α
+
+  public float Apply(float carrier, float lfo)
+  {
+    return carrier * (1f + Depth * lfo);
+  }
+}
+```
+
+---
+
+## 8. Envelopes (Stateful, Slow)
+
+One envelope per layer.
+
+```csharp
+public sealed class Envelope
+{
+  private float _sample;
+  private float _attackCoef;
+  private float _releaseCoef;
+  private bool _isActive;
+
+  public float Next()
+  {
+    _sample += (
+      _isActive ? (1f - _sample) * _attackCoef
+                : (0f - _sample) * _releaseCoef
+    );
+
+    return _sample;
+  }
+}
+```
+
+Attack/release coefficients are precomputed.
+
+---
+
+## 9. Layer = Small DSP Graph
+
+Each layer composes nodes:
+
+```csharp
+public sealed class Layer
+{
+  public SineOscillator Carrier;
+  public Lfo Lfo;
+  public Envelope Envelope;
+  public float Weight;
+
+  public float NextSample()
+  {
+    var c = Carrier.NextSample();
+    var m = 1f + Lfo.Sample;
+    var e = Envelope.Next();
+
+    return c * m * e * Weight;
+  }
+}
+```
+
+No dynamic allocation. No branching explosions.
+
+---
+
+## 10. Mixer (Final Stage)
+
+```csharp
+public sealed class Mixer
+{
+  private Layers[] _layers;
+
+  public float NextSample()
+  {
+    float sum = 0f;
+    for (int i = 0; i < _layers.Length; i++)
+    {
+      sum += _layers[i].NextSample();
+    }
+
+    return Math.Clamp(sum, -1f, 1f);
+  }
+}
+```
+
+Optional:
+
+* Soft limiter
+* Headroom scaling
+
+---
+
+## 11. Audio Callback Contract
+
+Platform side asks for buffers:
+
+```csharp
+public void Render(float[] buffer)
+{
+  for (int i = 0; i < buffer.Length; i++)
+  {
+    buffer[i] = _mixer.NextSample();
+  }
+}
+```
+
+This is the **only** place where samples are generated.
+
+---
+
+# 12. Parameter Changes (UI → DSP)
+
+Never write directly into DSP nodes from UI.
+Instead:
+
+* UI writes to a thread-safe parameter store
+* DSP reads smoothed values
+
+Example:
+
+```csharp
+carrierFrequency += (targetFrequency - carrierFrequency) * 0.001f;
+```
+
+No locks. No atomics if we can avoid them.
+
+---
+
+## 13. Battery & Thermal
+
+Mobile devices punish:
+
+* Excessive trigger calls
+* Per-sample allocations
+* High-rate modulation
+
+Mitigations:
+
+* Lookup tables for sine
+* Control-rate LFOs
+* Few layers (2-4 max)
+* Avoid stereo unless needed
+
+This engine can run **for hours** without depleating a phone if done right.
+
+---
+
+## 14. What Is Being Built (Conceptually)
+
+We now aim to have:
+
+* A deterministic DSP graph
+* A mobile-safe execution model
+* A clean separation between sound design and UI
+* A system that can express every "frequency" scheme discusses earlier
 
 ---
