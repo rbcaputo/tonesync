@@ -7,17 +7,22 @@
     <LangVersion>latest</LangVersion>
 
     <!-- Assembly metadata -->
-    <AssemblyName>FreqGen.Presets</AssemblyName>
-    <RootNamespace>FreqGen.Presets</RootNamespace>
-    <Version>1.0.0</Version>
+    <AssemblyName>FreqGen.Core</AssemblyName>
+    <RootNamespace>FreqGen.Core</RootNamespace>
+    <Version>2.0.0</Version>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <!-- Performance optimizations -->
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\FreqGen.Core\FreqGen.Core.csproj" />
-  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
 
 </Project>

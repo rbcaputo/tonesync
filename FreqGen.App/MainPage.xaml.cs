@@ -1,6 +1,6 @@
 ﻿namespace FreqGen.App
 {
-  public partial class MainPage : ContentPage
+  public sealed partial class MainPage : ContentPage
   {
     int count = 0;
 

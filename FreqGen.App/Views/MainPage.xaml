@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FreqGen.App.ViewModels"
+             xmlns:models="clr-namespace:FreqGen.Presets.Models;assembly=FreqGen.Presets"
+             x:Class="FreqGen.App.Views.MainPage"
+             x:DataType="vm:MainViewModel"
+             Title="FreqGen">
+
+  <ScrollView>
+    <VerticalStackLayout Padding="20" Spacing="20">
+
+      <!-- Header -->
+      <Label Text="FreqGen"
+             FontSize="32"
+             FontAttributes="Bold"
+             HorizontalOptions="Center"
+             Margin="0,20,0,0" />
+
+      <Label Text="Frequency Therapy"
+             FontSize="16"
+             TextColor="{StaticResource Gray500}"
+             HorizontalOptions="Center"
+             Margin="0,0,0,20" />
+
+      <!-- Status Display -->
+      <Frame BackgroundColor="{StaticResource Gray900}"
+             Padding="20"
+             CornerRadius="10"
+             HasShadow="False">
+        <Label Text="{Binding StatusText}"
+               FontSize="14"
+               HorizontalTextAlignment="Center"
+               LineBreakMode="WordWrap" />
+      </Frame>
+
+      <!-- Stop Button -->
+      <Button Text="⏹ Stop"
+              Command="{Binding StopCommand}"
+              BackgroundColor="{StaticResource Primary}"
+              TextColor="White"
+              HeightRequest="50"
+              CornerRadius="10"
+              FontSize="16"
+              FontAttributes="Bold"
+              IsEnabled="{Binding IsPlaying}" />
+
+      <!-- Preset Groups -->
+      <CollectionView ItemsSource="{Binding PresetGroups}"
+                      SelectionMode="None">
+        <CollectionView.ItemTemplate>
+          <DataTemplate x:DataType="vm:PresetGroup">
+            <VerticalStackLayout Spacing="10" Margin="0,20,0,0">
+
+              <!-- Category Header -->
+              <Label Text="{Binding Name}"
+                     FontSize="20"
+                     FontAttributes="Bold"
+                     Margin="0,0,0,10" />
+
+              <!-- Presets in Category -->
+              <CollectionView ItemsSource="{Binding .}"
+                              SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                  <DataTemplate x:DataType="models:FrequencyPreset">
+                    <Button Text="{Binding DisplayName}"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=PlayPresetCommand}"
+                            CommandParameter="{Binding .}"
+                            BackgroundColor="{StaticResource Gray800}"
+                            TextColor="White"
+                            HeightRequest="50"
+                            CornerRadius="10"
+                            Margin="0,0,0,10"
+                            HorizontalOptions="Fill" />
+                  </DataTemplate>
+                </CollectionView.ItemTemplate>
+              </CollectionView>
+
+            </VerticalStackLayout>
+          </DataTemplate>
+        </CollectionView.ItemTemplate>
+      </CollectionView>
+
+    </VerticalStackLayout>
+  </ScrollView>
+
+</ContentPage>
