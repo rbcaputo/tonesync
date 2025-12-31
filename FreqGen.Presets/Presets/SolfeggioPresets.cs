@@ -106,7 +106,7 @@ namespace FreqGen.Presets.Presets
     public static FrequencyPreset Expression { get; } = new()
     {
       ID = "solfeggio_741",
-      DisplayName = "Connection (741 Hz)",
+      DisplayName = "Expression (741 Hz)",
       Description = "Authentic self-expression and finding solutions",
       Category = PresetCategory.Solfeggio,
       RecommendedDuration = TimeSpan.FromMinutes(20),
