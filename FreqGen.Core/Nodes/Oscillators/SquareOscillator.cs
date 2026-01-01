@@ -1,24 +1,18 @@
 ﻿namespace FreqGen.Core.Nodes.Oscillators
 {
   /// <summary>
-  /// Square wave oscillator for true isochronic tones.
-  /// Produces hard on/off pulses suitable for rhythmic entrainment.
+  /// A square wave oscillator for isochronic tones.
+  /// Provides hard transitions suitable for rhythmic brainwave entrainment.
   /// </summary>
   public sealed class SquareOscillator : IAudioNode
   {
     private float _phase;
     private float _phaseIncrement;
-    private float _dutyCycle = 0.5f; // 50% duty cycle by default
 
     /// <summary>
-    /// Duty cycle: ratio of "on" time to total period (0.0-1.0).
-    /// 0.5 = symmetric square wave.
+    /// Gets or sets the duty cycle (0.0 to 1.0). Default is 0.5 (symmetric square).
     /// </summary>
-    public float DutyCycle
-    {
-      get => _dutyCycle;
-      set => Math.Clamp(value, 0.1f, 0.9f);
-    }
+    public float DutyCycle { get; set; } = 0.5f;
 
     /// <summary>
     /// Set the oscillator frequency.
@@ -27,30 +21,20 @@
     public void SetFrequency(float frequency, float sampleRate) =>
       _phaseIncrement = frequency / sampleRate;
 
-
     /// <summary>
-    /// Generate the next sample.
-    /// Must be called from audio thread only.
+    /// Processes the buffer with square pulses.
     /// </summary>
-    public float NextSample()
+    public void Process(Span<float> buffer)
     {
-      // Normalize phase to [0, 1]
-      float normalizedPhase = _phase - MathF.Floor(_phase);
-      // Square wave: +1 when phase < duty cycle, -1 otherwise
-      float sample = normalizedPhase < _dutyCycle ? 1f : -1f;
-      _phase += _phaseIncrement;
-
-      // Wrap phase
-      if (_phase >= 1f)
-        _phase -= 1f;
-      else if (_phase < 0f)
-        _phase += 1f;
-
-      return sample;
+      for (int i = 0; i < buffer.Length; i++)
+      {
+        buffer[i] = _phase < DutyCycle ? 1.0f : -1.0f;
+        _phase = (_phase + _phaseIncrement) % 1.0f;
+      }
     }
 
     /// <summary>
-    /// Reset phase to zero.
+    /// Resets the oscillator state to prevent clicks on restart.
     /// </summary>
     public void Reset() =>
       _phase = 0f;

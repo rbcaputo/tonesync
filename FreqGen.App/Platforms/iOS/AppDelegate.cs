@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace FreqGen.App
+namespace FreqGen.App.Platforms.iOS
 {
   [Register("AppDelegate")]
   public class AppDelegate : MauiUIApplicationDelegate

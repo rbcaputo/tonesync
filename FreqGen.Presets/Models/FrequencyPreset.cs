@@ -1,7 +1,11 @@
-﻿namespace FreqGen.Presets.Models
+﻿using FreqGen.Core;
+using FreqGen.Core.Exceptions;
+using FreqGen.Presets.Exceptions;
+
+namespace FreqGen.Presets.Models
 {
   /// <summary>
-  /// A complete frequency therapy preset with metadata and layer configurations.
+  /// Defines a complete therapeutic audio program consisting of multiple layers.
   /// </summary>
   public sealed class FrequencyPreset
   {
@@ -28,7 +32,7 @@
     /// <summary>
     /// Layer configurations for this preset.
     /// </summary>
-    public required LayerConfig[] Layers { get; init; }
+    public required List<LayerConfig> Layers { get; init; }
 
     /// <summary>
     /// Recommended listening duration.
@@ -38,31 +42,20 @@
     /// <summary>
     /// Optional tags for searching/filtering.
     /// </summary>
-    public string[] Tags { get; init; } = [];
+    public List<string> Tags { get; init; } = [];
 
+    /// <summary>
+    /// Performs a safety check on all layers to ensure values are within hardware limits.
+    /// </summary>
+    /// <exception cref="PresetValidationException">Thrown if frequencies or weights are invalid.</exception>
     public void Validate()
     {
-      if (string.IsNullOrWhiteSpace(ID))
-        throw new InvalidOperationException("Preset ID cannot be empty");
-
-      if (Layers.Length == 0)
-        throw new InvalidOperationException("Preset must have at least one layer");
+      if (Layers.Count == 0)
+        throw new PresetValidationException("Preset must contain at least one layer.", ID);
 
       foreach (LayerConfig layer in Layers)
-        if (!layer.ToLayerConfig().IsValid())
-          throw new InvalidOperationException($"Invalid layer configuration in preset {ID}");
+        if (layer.CarrierHz < 20 || layer.CarrierHz > 20000)
+          throw new PresetValidationException($"Invalid carrier frequency: {layer.CarrierHz}", ID);
     }
-
-    /// <summary>
-    /// Convert all layers to Core LayerConfig array.
-    /// </summary>
-    public Core.LayerConfiguration[] ToLayerConfigs() =>
-      [.. Layers.Select(l => l.ToLayerConfig())];
-
-    /// <summary>
-    /// Get a summary of the preset.
-    /// </summary>
-    public string GetSummary() =>
-      $"{DisplayName} ({Category}) - {Layers.Length} layer(s), {RecommendedDuration.TotalMinutes}min";
   }
 }

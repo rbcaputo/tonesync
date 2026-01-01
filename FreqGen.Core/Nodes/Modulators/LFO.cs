@@ -1,54 +1,50 @@
 ﻿namespace FreqGen.Core.Nodes.Modulators
 {
   /// <summary>
-  /// Low Frequency Oscillator for control-rate modulation.
-  /// Optimized to update at control rate rather than audio rate.
+  /// Low-Frequency Oscillator optimized for modulation.
+  /// Updates at a control rate (every 64 samples) to conserve CPU on mobile devices.
   /// </summary>
   public sealed class LFO : IAudioNode
   {
-    private const int UpdateInterval = 64; // Control rate: update every 64 samples
+    private const int ControlRate = 64; // Update every 64 samples
 
     private float _phase;
     private float _phaseIncrement;
-    private float _cachedSample;
-    private int _updateCounter;
+    private float _currentValue;
+    private int _sampleCounter;
 
     /// <summary>
     /// Set the LFO frequency (typically 0.5-30 Hz)
     /// </summary>
     public void SetFrequency(float frequency, float sampleRate) =>
-      _phaseIncrement = MathF.Tau * frequency / sampleRate;
+      // Compensate increment for the reduced update rate
+      _phaseIncrement = MathF.Tau * frequency / (sampleRate / ControlRate);
 
     /// <summary>
-    /// Get next modulation value.
-    /// Returns cached value most of the time for CPU efficiency.
+    /// Populates the buffer with a stepped LFO signal for modulation.
     /// </summary>
-    public float NextSample()
+    public void Process(Span<float> buffer)
     {
-      if (++_updateCounter >= UpdateInterval)
+      for (int i = 0; i < buffer.Length; i++)
       {
-        _updateCounter = 0;
-        _cachedSample = MathF.Sin(_phase);
-        _phase += _phaseIncrement * UpdateInterval;
+        if (_sampleCounter++ % ControlRate == 0)
+        {
+          _currentValue = MathF.Sin(_phase);
+          _phase = (_phase + _phaseIncrement) % MathF.Tau;
+        }
 
-        // Wrap phase
-        if (_phase >= MathF.Tau)
-          _phase -= MathF.Tau;
-        else if (_phase < 0f)
-          _phase += MathF.Tau;
+        buffer[i] = _currentValue;
       }
-
-      return _cachedSample;
     }
 
     /// <summary>
-    /// Reset phase and cache.
+    /// Resets the oscillator state to prevent clicks on restart.
     /// </summary>
     public void Reset()
     {
       _phase = 0f;
-      _cachedSample = 0f;
-      _updateCounter = 0;
+      _currentValue = 0f;
+      _sampleCounter = 0;
     }
   }
 }

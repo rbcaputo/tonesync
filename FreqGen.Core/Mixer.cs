@@ -3,105 +3,52 @@
 namespace FreqGen.Core
 {
   /// <summary>
-  /// Mixes multiple audio layers into a single output.
-  /// Applies headroom control and soft limiting.
+  /// Sums multiple audio layers into a single output stream.
+  /// Includes safety clamping and headroom management.
   /// </summary>
-  public sealed class Mixer : IAudioNode
+  public sealed class Mixer
   {
-    private readonly Layer[] _layers;
-    private readonly float _headroom;
+    private readonly List<Layer> _layers = [];
+    private readonly float[] _tempBuffer = new float[512];
 
     /// <summary>
-    /// Number of layers in this mixer.
+    /// Generates a mixed audio block.
     /// </summary>
-    public int LayerCount => _layers.Length;
-
-    public bool AllSilent
+    /// <param name="outputBuffer">The buffer to fill with the final mixed signal.</param>
+    /// <param name="sampleRate">System audio sample rate.</param>
+    /// <param name="configs">The current configurations for all active layers.</param>
+    public void Render(Span<float> outputBuffer, float sampleRate, IList<LayerConfiguration> configs)
     {
-      get
+      outputBuffer.Clear();
+
+      for (int i = 0; i < configs.Count; i++)
       {
-        for (int i = 0; i < LayerCount; i++)
-          if (!_layers[i].IsSilent)
-            return false;
+        // Sync layer pool
+        if (i >= _layers.Count)
+          _layers.Add(new());
 
-        return true;
+        Span<float> tempSpam = _tempBuffer.AsSpan(0, outputBuffer.Length);
+        tempSpam.Clear();
+
+        _layers[i].UpdateAndProcess(tempSpam, sampleRate, configs[i]);
+
+        // Mix into output
+        for (int j = 0; j < outputBuffer.Length; j++)
+          outputBuffer[j] += tempSpam[j];
       }
+
+      // Safety clamp
+      for (int k = 0; k < outputBuffer.Length; k++)
+        outputBuffer[k] = Math.Clamp(outputBuffer[k], -1.0f, 1.0f);
     }
 
     /// <summary>
-    /// Create a mixer with specified number of layers.
+    /// Resets the mixer state to prevent clicks on restart.
     /// </summary>
-    /// <param name="layerCount">Number of layers to mix</param>
-    /// <param name="sampleRate">Audio sample rate</param>
-    /// <param name="headroom">Output headroom multiplier (default 0.8 = -1.9 dB)</param>
-    public Mixer(int layerCount, float sampleRate, float headroom = 0.8f)
+    public void Reset()
     {
-      if (layerCount < 1)
-        throw new ArgumentException("Layer count must be at least 1", nameof(layerCount));
-
-      if (headroom <= 0f || headroom > 1f)
-        throw new ArgumentException("Headroom must be in range (0, 1]", nameof(headroom));
-
-      _layers = new Layer[layerCount];
-      _headroom = headroom;
-
-      for (int i = 0; i < layerCount; i++)
-        _layers[i] = new(sampleRate);
-    }
-
-    /// <summary>
-    /// Get a specific layer for configuration.
-    /// </summary>
-    public Layer GetLayer(int index)
-    {
-      if (index < 0 || index >= _layers.Length)
-        throw new ArgumentOutOfRangeException(nameof(index));
-
-
-      return _layers[index];
-    }
-
-    /// <summary>
-    /// Generate next mixed sample (audio thread only).
-    /// </summary>
-    /// <returns></returns>
-    public float NextSample()
-    {
-      float sum = 0f;
-
-      for (int i = 0; i < _layers.Length; i++)
-        sum += _layers[i].NextSample();
-
-      // Apply headroom and soft clipping
-      sum *= _headroom;
-      return Math.Clamp(sum, -1f, 1f);
-    }
-
-    /// <summary>
-    /// Start all layers.
-    /// </summary>
-    public void StartAll()
-    {
-      for (int i = 0; i < _layers.Length; i++)
-        _layers[i].Start();
-    }
-
-    /// <summary>
-    /// Stop all layers.
-    /// </summary>
-    public void StopAll()
-    {
-      for (int i = 0; i < _layers.Length; i++)
-        _layers[i].Stop();
-    }
-
-    /// <summary>
-    /// Reset all layers.
-    /// </summary>
-    public void ResetAll()
-    {
-      for (int i = 0; i < _layers.Length; i++)
-        _layers[i].Reset();
+      foreach (Layer layer in _layers)
+        layer.Reset();
     }
   }
 }

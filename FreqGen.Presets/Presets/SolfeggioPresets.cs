@@ -8,176 +8,110 @@ namespace FreqGen.Presets.Presets
   /// </summary>
   public static class SolfeggioPresets
   {
-    /// <summary>
-    /// 396 Hz - Liberation from Fear
-    /// Associated with releasing fear and guilt.
-    /// </summary>
-    public static FrequencyPreset Liberation { get; } = new()
+    public static FrequencyPreset Sf_174Hz => new()
     {
-      ID = "solfeggio_396",
-      DisplayName = "Liberation (396 Hz)",
-      Description = "Release fear, guilt, and negative emotions",
+      ID = "sf_174",
+      DisplayName = "Foundation (174Hz)",
+      Description = "Associated with pain reduction and organizational safety.",
       Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["solfeggio", "fear", "liberation", "healing"],
-      Layers =
-      [
-        LayerConfig.PureTone(
-          frequency: 396f,
-          weight: 1f,
-          description: "Root tone"
-        )
-      ]
+      Layers = [LayerConfig.PureTone(174f)]
+    };
+
+    public static FrequencyPreset Sf_285Hz => new()
+    {
+      ID = "sf_285",
+      DisplayName = "Quantum Cognition (285Hz)",
+      Description = "Associated with healing tissue and internal organ repair.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(285f)]
+    };
+
+    public static FrequencyPreset Sf_396Hz => new()
+    {
+      ID = "sf_396",
+      DisplayName = "Liberation (396Hz)",
+      Description = "Associated with turning grief into joy and liberating guilt/fear.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(396f)]
+    };
+
+    public static FrequencyPreset Sf_417Hz => new()
+    {
+      ID = "sf_417",
+      DisplayName = "Change (417Hz)",
+      Description = "Associated with undoing situations and facilitating positive change.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(417f)]
+    };
+
+    public static FrequencyPreset Sf_528Hz => new()
+    {
+      ID = "sf_528",
+      DisplayName = "Transformation (528Hz)",
+      Description = "The 'Miracle' tone for DNA repair, transformation, and clarity of mind.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(528f)]
+    };
+
+    public static FrequencyPreset Sf_639Hz => new()
+    {
+      ID = "sf_639",
+      DisplayName = "Relationship (639Hz)",
+      Description = "Associated with harmonizing relationships and social connection.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(639f)]
+    };
+
+    public static FrequencyPreset Sf_741Hz => new()
+    {
+      ID = "sf_741",
+      DisplayName = "Expression (741Hz)",
+      Description = "Associated with solving problems and expression/solutions.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(741f)]
+    };
+
+    public static FrequencyPreset Sf_852Hz => new()
+    {
+      ID = "sf_852",
+      DisplayName = "Intuition (852Hz)",
+      Description = "Associated with returning to spiritual order and awakening intuition.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(852f)]
+    };
+
+    public static FrequencyPreset Sf_963Hz => new()
+    {
+      ID = "sf_963",
+      DisplayName = "Divinity (963Hz)",
+      Description = "Associated with higher consciousness and spiritual enlightenment.",
+      Category = PresetCategory.Solfeggio,
+      Layers = [LayerConfig.PureTone(963f)]
     };
 
     /// <summary>
-    /// 417 Hz - Facilitating Change
-    /// Associated with undoing situations and facilitating change.
+    /// A complex harmony of the core solfeggio triad (396, 528, 639).
     /// </summary>
-    public static FrequencyPreset Change { get; } = new()
+    public static FrequencyPreset Sf_Harmony => new()
     {
-      ID = "solfeggio_417",
-      DisplayName = "Facilitating Change (417 Hz)",
-      Description = "Undo negative situations and facilitate positive change",
+      ID = "sf_harmony",
+      DisplayName = "The Core Triad Harmony",
+      Description = "A balanced mix of Liberation, Transformation, and Connection.",
       Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["solfeggio", "change", "transformation"],
       Layers =
-      [
-        LayerConfig.PureTone(
-          frequency: 417f,
-          weight: 1f,
-          description: "Root tone"
-        )
-      ]
+        [
+          LayerConfig.PureTone(396f, 0.33f),
+          LayerConfig.PureTone(528f, 0.33f),
+          LayerConfig.PureTone(639f, 0.33f)
+        ]
     };
 
-    /// <summary>
-    /// 528 Hz - Transformation and DNA Repair
-    /// The "Love Frequency" - associated with healing and transformation.
-    /// </summary>
-    public static FrequencyPreset Transformation { get; } = new()
-    {
-      ID = "solfeggio_528",
-      DisplayName = "Transformation (528 Hz)",
-      Description = "The Love Frequency - healing, transformation, and DNA repair",
-      Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["solfeggio", "love", "healing", "transformation", "dna"],
-      Layers =
+    public static IEnumerable<FrequencyPreset> All =>
       [
-        new LayerConfig
-        {
-          CarrierHz = 528f,
-          ModulationHz = 8f, // Light alpha modulation
-          ModulationDepth = 0.3f,
-          Weight = 1f,
-          Description = "528 Hz with gentle alpha modulation"
-        }
-      ]
-    };
-
-    /// <summary>
-    /// 639 Hz - Connecting and Relationships
-    /// Associated with harmonious relationships and communication.
-    /// </summary>
-    public static FrequencyPreset Connection { get; } = new()
-    {
-      ID = "solfeggio_639",
-      DisplayName = "Connection (639 Hz)",
-      Description = "Harmonious relationships and heart-centered communication",
-      Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["solfeggio", "relationships", "connection", "heart"],
-      Layers =
-      [
-        LayerConfig.PureTone(
-          frequency: 639f,
-          weight: 1f,
-          description: "Root tone"
-        )
-      ]
-    };
-
-    /// <summary>
-    /// 741 Hz - Expression and Solutions
-    /// Associated with self-expression and problem-solving.
-    /// </summary>
-    public static FrequencyPreset Expression { get; } = new()
-    {
-      ID = "solfeggio_741",
-      DisplayName = "Expression (741 Hz)",
-      Description = "Authentic self-expression and finding solutions",
-      Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["solfeggio", "expression", "clarity", "solutions"],
-      Layers =
-      [
-        LayerConfig.PureTone(
-          frequency: 741f,
-          weight: 1f,
-          description: "Root tone"
-        )
-      ]
-    };
-
-    /// <summary>
-    /// 852 Hz - Awakening Intuition
-    /// Associated with spiritual awareness and intuition.
-    /// </summary>
-    public static FrequencyPreset Intuition { get; } = new()
-    {
-      ID = "solfeggio_852",
-      DisplayName = "Intuition (852 Hz)",
-      Description = "Awakening intuition and spiritual awareness",
-      Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["solfeggio", "intuition", "spiritual", "awareness"],
-      Layers =
-      [
-        LayerConfig.PureTone(
-          frequency: 852f,
-          weight: 1f,
-          description: "Root tone"
-        )
-      ]
-    };
-
-    /// <summary>
-    /// Complete Solfeggio Sequence
-    /// All six frequencies played in harmony (use with care - complex sound).
-    /// </summary>
-    public static FrequencyPreset CompleteHarmony { get; } = new()
-    {
-      ID = "solfeggio_complete",
-      DisplayName = "Complete Harmony",
-      Description = "All six Solfeggio frequencies in balanced harmony",
-      Category = PresetCategory.Solfeggio,
-      RecommendedDuration = TimeSpan.FromMinutes(30),
-      Tags = ["solfeggio", "complete", "harmony", "advanced"],
-      Layers =
-      [
-        LayerConfig.PureTone(396f, 0.17f, "Liberation"),
-        LayerConfig.PureTone(417f, 0.17f, "Change"),
-        LayerConfig.PureTone(528f, 0.20f, "Transformation (emphasized)"),
-        LayerConfig.PureTone(639f, 0.17f, "Connection"),
-        LayerConfig.PureTone(741f, 0.15f, "Expression"),
-        LayerConfig.PureTone(852f, 0.14f, "Intuition")
-      ]
-    };
-
-    /// <summary>
-    /// All Solfeggio presets.
-    /// </summary>
-    public static FrequencyPreset[] All { get; } =
-    [
-      Liberation,
-      Change,
-      Transformation,
-      Connection,
-      Expression,
-      Intuition,
-      CompleteHarmony
-    ];
+        Sf_174Hz, Sf_285Hz, Sf_396Hz,
+        Sf_417Hz, Sf_528Hz, Sf_639Hz,
+        Sf_741Hz, Sf_852Hz, Sf_963Hz,
+        Sf_Harmony
+      ];
   }
 }

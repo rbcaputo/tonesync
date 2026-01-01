@@ -5,88 +5,46 @@ using FreqGen.Core.Nodes.Oscillators;
 namespace FreqGen.Core
 {
   /// <summary>
-  /// A single audio layer combining carrier, modulation and envelope.
-  /// Represents one complete signal path in the mix.
+  /// Orchestrates a single signal path: Oscillator -> Modulator -> Envelope -> Mixer.
   /// </summary>
-  public sealed class Layer : IAudioNode
+  public sealed class Layer
   {
-    private readonly SineOscillator _carrier;
-    private readonly LFO _lfo;
-    private readonly AMModulator _modulator;
-    private readonly Envelope _envelope;
-    private readonly float _sampleRate;
+    private readonly SineOscillator _carrier = new();
+    private readonly LFO _lfo = new();
+    private readonly Envelope _envelope = new();
+    private readonly float[] _modulatorBuffer = new float[512];
 
     /// <summary>
-    /// Layer output weight/volume.
-    /// Safe to update from any thread.
+    /// Processes the layer logic into the provided buffer based on a configuration.
     /// </summary>
-    public float Weight { get; set; } = 1f;
-
-    /// <summary>
-    /// Check if the layer has faded out completely.
-    /// </summary>
-    public bool IsSilent => _envelope.Current < 0.001f;
-
-    public Layer(
-      float sampleRate,
-      float attackSeconds = 30f,
-      float releaseSeconds = 30f
-    )
+    /// <param name="buffer">The buffer to update.</param>
+    /// <param name="sampleRate">System audio sample rate.</param>
+    /// <param name="config">The configurations for the layer.</param>
+    public void UpdateAndProcess(Span<float> buffer, float sampleRate, LayerConfiguration config)
     {
-      _carrier = new();
-      _lfo = new();
-      _modulator = new();
-      _envelope = new();
-      _sampleRate = sampleRate;
+      _carrier.SetFrequency(config.CarrierFrequency, sampleRate);
+      _lfo.SetFrequency(config.ModulatorFrequency, sampleRate);
+      _envelope.Trigger(config.IsActive, sampleRate, 30.0f); // 30s
 
-      _envelope.SetAttackTime(attackSeconds, sampleRate);
-      _envelope.SetReleaseTime(releaseSeconds, sampleRate);
+      // Generate carrier
+      _carrier.Process(buffer);
+
+      // Generate modulator signal
+      Span<float> modulatorSpan = _modulatorBuffer.AsSpan(0, buffer.Length);
+      _lfo.Process(modulatorSpan);
+
+      // Apply AM
+      AMModulator.Apply(buffer, modulatorSpan, config.ModulatorDepth);
+
+      // Apply weight and envelope
+      for (int i = 0; i < buffer.Length; i++)
+        buffer[i] *= config.Weight;
+
+      _envelope.Process(buffer);
     }
 
     /// <summary>
-    /// Configure the carrier frequency.
-    /// </summary>
-    public void SetCarrierFrequency(float frequency) =>
-      _carrier.SetFrequency(frequency, _sampleRate);
-
-    /// <summary>
-    /// Configure the modulation frequency and depth.
-    /// </summary>
-    /// <param name="frequency">Modulation rate in Hz (typically 0.5-30 Hz)</param>
-    /// <param name="depth">Modulation depth (0.0-1.0)</param>
-    public void SetModulation(float frequency, float depth)
-    {
-      _lfo.SetFrequency(frequency, _sampleRate);
-      _modulator.Depth = depth;
-    }
-
-    /// <summary>
-    /// Start the layer (begin attack phase).
-    /// </summary>
-    public void Start() =>
-      _envelope.Trigger(true);
-
-    /// <summary>
-    /// Stop the layer (begin release phase).
-    /// </summary>
-    public void Stop() =>
-      _envelope.Trigger(false);
-
-    /// <summary>
-    /// Generate next sample (audio thread only).
-    /// </summary>
-    public float NextSample()
-    {
-      float carrier = _carrier.NextSample();
-      float lfo = _lfo.NextSample();
-      float modulated = _modulator.Apply(carrier, lfo);
-      float envelope = _envelope.NextSample();
-
-      return modulated * envelope * Weight;
-    }
-
-    /// <summary>
-    /// Reset all internal state.
+    /// Resets the layer state to prevent clicks on restart.
     /// </summary>
     public void Reset()
     {

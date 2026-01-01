@@ -1,7 +1,6 @@
-﻿using ObjCRuntime;
-using UIKit;
+﻿using UIKit;
 
-namespace FreqGen.App
+namespace FreqGen.App.Platforms.iOS
 {
   public class Program
   {

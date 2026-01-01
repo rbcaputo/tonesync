@@ -19,5 +19,16 @@ namespace FreqGen.App.Views
       base.OnAppearing();
       await _viewModel.InitializeAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+      base.OnDisappearing();
+
+      // Ensure audio stops when page is not visible
+      if (_viewModel.IsPlaying)
+      {
+        _ = _viewModel.StopCommand.ExecuteAsync(null);
+      }
+    }
   }
 }

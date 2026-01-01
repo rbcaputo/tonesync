@@ -5,12 +5,12 @@ namespace FreqGen.App.Services
   /// <summary>
   /// Platform-agnostic audio service interface.
   /// </summary>
-  public interface IAudioService
+  public interface IAudioService : IAsyncDisposable
   {
     /// <summary>
     /// Check if audio is currently playing.
     /// </summary>
-    public bool IsPlaying { get; }
+    bool IsPlaying { get; }
 
     /// <summary>
     /// Get the currently playing preset.
@@ -20,12 +20,12 @@ namespace FreqGen.App.Services
     /// <summary>
     /// Initialize the audio system.
     /// </summary>
-    public Task InitializeAsync();
+    Task InitializeAsync();
 
     /// <summary>
     /// Load and play a preset.
     /// </summary>
-    public Task PlayPresetAsync(FrequencyPreset preset);
+    Task PlayPresetAsync(FrequencyPreset preset);
 
     /// <summary>
     /// Stop playback.
@@ -33,8 +33,9 @@ namespace FreqGen.App.Services
     Task StopAsync();
 
     /// <summary>
-    /// Cleanup and release resources.
+    /// Retry initialization after a failure.
     /// </summary>
-    Task DisposeAsync();
+    /// <returns>True if retry succeeded, false otherwise</returns>
+    Task<bool> RetryInitializationAsync();
   }
 }

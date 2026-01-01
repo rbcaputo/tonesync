@@ -1,8 +1,10 @@
-﻿namespace FreqGen.Core.Nodes.Oscillators
+﻿using System.Runtime.CompilerServices;
+
+namespace FreqGen.Core.Nodes.Oscillators
 {
   /// <summary>
-  /// Pure sine wave oscillator.
-  /// Thread-safe for parameters updates, real-time safe for audio generation.
+  /// A high-precision sine wave oscillator.
+  /// Uses a phase-accumulator approach to ensure continuous signals across block boundaries.
   /// </summary>
   public sealed class SineOscillator : IAudioNode
   {
@@ -10,32 +12,28 @@
     private float _phaseIncrement;
 
     /// <summary>
-    /// Set the oscillator frequency.
-    /// Safe to call from any thread.
+    /// Updates the oscillator's frequency based on the current sample rate.
     /// </summary>
+    /// <param name="frequency">Target frequency in Hz.</param>
+    /// <param name="sampleRate">The system's current audio sample rate.</param>
     public void SetFrequency(float frequency, float sampleRate) =>
       _phaseIncrement = MathF.Tau * frequency / sampleRate;
 
     /// <summary>
-    /// Generate the next sample.
-    /// Must be called from audio thread only.
+    /// Fills the buffer with a pure sine wave.
     /// </summary>
-    public float NextSample()
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    public void Process(Span<float> buffer)
     {
-      float sample = MathF.Sin(_phase);
-      _phase += _phaseIncrement;
-
-      // Wrap phase
-      if (_phase >= MathF.Tau)
-        _phase -= MathF.Tau;
-      else if (_phase < 0f)
-        _phase += MathF.Tau;
-
-      return sample;
+      for (int i = 0; i < buffer.Length; i++)
+      {
+        buffer[i] = MathF.Sin(_phase);
+        _phase = (_phase + _phaseIncrement) % MathF.Tau;
+      }
     }
 
     /// <summary>
-    /// Reset phase to zero.
+    /// Resets the oscillator state to prevent clicks on restart.
     /// </summary>
     public void Reset() =>
       _phase = 0f;

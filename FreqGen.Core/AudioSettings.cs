@@ -1,78 +1,46 @@
 ﻿namespace FreqGen.Core
 {
   /// <summary>
-  /// Global audio configuration constants.
+  /// Provides global constants and default values for the FreqGen audio system.
   /// </summary>
-  public sealed record AudioSettings
+  public static class AudioSettings
   {
     /// <summary>
-    /// Default sample rate in Hz.
-    /// 44100 Hz is CD quality and widely supported.
-    /// </summary>
+    /// Default high-fidelity sample rate.
+    /// </summary>>
     public const int SampleRate = 44100;
 
     /// <summary>
-    /// Aufio buffer size in samples.
-    /// Larger = more latency but more efficient.
-    /// 1024 samples @ 44.1 kHz = ~23ms latency.
+    /// Recommended buffer size for mobile low-latency.
     /// </summary>
     public const int BufferSize = 1024;
 
     /// <summary>
-    /// Minimum audible frequency in Hz.
-    /// Below this, sound is felt rather than heard.
+    /// Constraints for Carrier frequencies.
     /// </summary>
-    public const float MinFrequency = 20f;
-
-    /// <summary>
-    /// Maximum safe frequency (Nyquist frequency).
-    /// Must be less than SampleRate / 2 to avoid aliasing.
-    /// </summary>
-    public const float MaxFrequency = SampleRate / 2f;
-
-    /// <summary>
-    /// Typical carrier frequency range for therapy audio.
-    /// </summary>
-    public sealed record CarrierRange
+    public static class Carrier
     {
-      public const float Min = 100f;  // Lower bound for pleasant tones
-      public const float Max = 1000f; // Upper bound for sustained listening
-      public const float Default = 200f;
+      public const float Minimum = 20.0f;
+      public const float Maximum = 2000.0f;
+      public const float Default = 440.0f;
     }
 
     /// <summary>
-    /// Modeulation frequency ranges for different brainwave bands.
+    /// Constraints for Modulation (LFO) frequencies.
     /// </summary>
-    public sealed record ModulationRange
+    public static class Modulation
     {
-      public const float DeltaMin = 0.5f;
-      public const float DeltaMax = 4f;
-
-      public const float ThetaMin = 4f;
-      public const float ThetaMax = 8f;
-
-      public const float AlphaMin = 8f;
-      public const float AlphaMax = 13f;
-
-      public const float BetaMin = 13f;
-      public const float BetaMax = 30f;
-
-      public const float GammaMin = 30f;
-      public const float GammaMax = 100f;
+      public const float Minimum = 0.1f;
+      public const float Maximum = 100.0f;
     }
 
     /// <summary>
-    /// Recommended envelope times for therapy sessions.
+    /// Constants for smooth signal transitions.
     /// </summary>
-    public sealed record EnvelopeTimes
+    public static class Envelope
     {
-      public const float FastAttack = 5f;    // 5 seconds
-      public const float NormalAttack = 30f; // 30 seconds (default)
-      public const float SlowAttack = 60f;   // 60 seconds
-
-      public const float FastRelease = 5f;
-      public const float NormalRelease = 30f;
-      public const float SlowRelease = 60f;
+      public const float DefaultAttackSeconds = 10.0f;
+      public const float DefaultReleaseSeconds = 10.0f;
     }
   }
 }

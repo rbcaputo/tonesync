@@ -4,141 +4,70 @@ namespace FreqGen.Presets.Presets
 {
   /// <summary>
   /// Isochronic tone presets using high modulation depth for rhythmic pulsing.
-  /// More pronounced than standard AM - creates distinct on/off pulses.
+  /// 
+  /// IMPLEMENTATION NOTE:
+  /// These presets use high-depth amplitude modulation (AM) with sine wave carriers
+  /// to create isochronic-like pulses. True isochronic tones use square wave gating,
+  /// but high-depth sine wave AM (0.85-1.0) produces similar entrainment effects
+  /// with less harmonic distortion and listening fatigue.
+  /// 
   /// </summary>
   public static class IsochronicPresets
   {
-    /// <summary>
-    /// Deep Relaxation (4 Hz Isochronic)
-    /// Strong theta pulses for deep relaxation.
-    /// </summary>
-    public static FrequencyPreset DeepRelaxation { get; } = new()
+    public static FrequencyPreset Ic_Delta_PowerNap => new()
     {
-      ID = "isochronic_theta_4hz",
-      DisplayName = "Deep Relaxation (4 Hz)",
-      Description = "Isochronic theta pulses for deep relaxation",
+      ID = "is_delta_01",
+      DisplayName = "PowerNap (3Hz)",
+      Description = "Sharp 3Hz pulses for rapid physical recovery and restorative rest.",
       Category = PresetCategory.Isochronic,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["isochronic", "theta", "relaxation", "pulses"],
       Layers =
-      [
-        new LayerConfig
-        {
-          CarrierHz = 250f,
-          ModulationHz = 4f,
-          ModulationDepth = 1f, // Full depth for clear pulses
-          Weight = 1f,
-          Description = "4 Hz theta pulses"
-        }
-      ]
+        [
+          new() { CarrierHz = 120f, ModulationHz = 3.0f, ModulationDepth = 1.0f, Weight = 1.0f }
+        ]
     };
 
-    public static FrequencyPreset MeditationBoost { get; } = new()
+    public static FrequencyPreset Ic_Theta_Creative => new()
     {
-      ID = "isochronic_theta_7hz",
-      DisplayName = "Meditation Boost (7 Hz)",
-      Description = "Isochronic theta pulses to enhance meditation depth",
+      ID = "ic_theta_01",
+      DisplayName = "Creative Surge (6Hz)",
+      Description = "Rhythmic pulsing at 6Hz to bypass analytical filters and access creativity.",
       Category = PresetCategory.Isochronic,
-      RecommendedDuration = TimeSpan.FromMinutes(25),
-      Tags = ["isochronic", "meditation", "theta"],
       Layers =
-      [
-        new LayerConfig
-        {
-          CarrierHz = 220f,
-          ModulationHz = 7f,
-          ModulationDepth = 0.95f,
-          Weight = 1f,
-          Description = "7 Hz theta pulses"
-        }
-      ]
+        [
+          new() { CarrierHz = 180f, ModulationHz = 6.0f, ModulationDepth = 1.0f, Weight = 1.0f }
+        ]
     };
 
-    /// <summary>
-    /// Focus Training (10 Hz Isochronic)
-    /// Alpha-range pulses for sustained focus and concentration.
-    /// </summary>
-    public static FrequencyPreset FocusTraining { get; } = new()
+    public static FrequencyPreset Ic_Alpha_Unwind => new()
     {
-      ID = "isochronic_alpha_10hz",
-      DisplayName = "Focus Training (10 Hz)",
-      Description = "Isochronic alpha pulses for focus and concentration",
+      ID = "ic_alpha_01",
+      DisplayName = "Deep Unwind (10Hz)",
+      Description = "10Hz pulses for stress release and clearing mental fog.",
       Category = PresetCategory.Isochronic,
-      RecommendedDuration = TimeSpan.FromMinutes(30),
-      Tags = ["isochronic", "focus", "alpha", "concentration"],
       Layers =
-      [
-        new LayerConfig
-        {
-          CarrierHz = 300f,
-          ModulationHz = 10f,
-          ModulationDepth = 0.9f,
-          Weight = 1f,
-          Description = "10 Hz alpha pulses"
-        }
-      ]
+        [
+          new() { CarrierHz = 240f, ModulationHz = 10.0f, ModulationDepth = 1.0f, Weight = 1.0f }
+        ]
     };
 
-    /// <summary>
-    /// Energy Boost (15 Hz Isochronic)
-    /// Beta-range pulses for mental alertness and energy.
-    /// </summary>
-    public static FrequencyPreset EnergyBoost { get; } = new()
+    public static FrequencyPreset Ic_Beta_Focus => new()
     {
-      ID = "isochronic_beta_15hz",
-      DisplayName = "Energy Boost (15 Hz)",
-      Description = "Isochronic beta pulses for alertness and energy",
+      ID = "ic_beta_01",
+      DisplayName = "High Focus (15Hz)",
+      Description = "Intense 15Hz pulsing for study, coding, or high-performance cognitive work.",
       Category = PresetCategory.Isochronic,
-      RecommendedDuration = TimeSpan.FromMinutes(20),
-      Tags = ["isochronic", "energy", "beta", "alertness"],
       Layers =
-      [
-        new LayerConfig
-        {
-          CarrierHz = 280f,
-          ModulationHz = 15f,
-          ModulationDepth = 0.85f,
-          Weight = 1f,
-          Description = "15 Hz beta pulses"
-        }
-      ]
+        [
+          new() { CarrierHz = 300f, ModulationHz = 15.0f, ModulationDepth = 1.0f, Weight = 1.0f }
+        ]
     };
 
-    /// <summary>
-    /// Power Nap (3 Hz Isochronic)
-    /// Deep delta pulses for quick, restorative rest.
-    /// </summary>
-    public static FrequencyPreset PowerNap { get; } = new()
-    {
-      ID = "isochronic_delta_3hz",
-      DisplayName = "Power Nap (3 Hz)",
-      Description = "Deep delta pulses for quick restorative sleep",
-      Category = PresetCategory.Isochronic,
-      RecommendedDuration = TimeSpan.FromMinutes(15),
-      Tags = ["isochronic", "sleep", "delta", "nap"],
-      Layers =
+    public static IEnumerable<FrequencyPreset> All =>
       [
-        new LayerConfig
-        {
-          CarrierHz = 180f,
-          ModulationHz = 3f,
-          ModulationDepth = 1f,
-          Weight = 1f,
-          Description = "3 Hz delta pulses"
-        }
-      ]
-    };
-
-    /// <summary>
-    /// All isochronic presets.
-    /// </summary>
-    public static FrequencyPreset[] All { get; } =
-    [
-      DeepRelaxation,
-      MeditationBoost,
-      FocusTraining,
-      EnergyBoost,
-      PowerNap
-    ];
+        Ic_Delta_PowerNap,
+        Ic_Theta_Creative,
+        Ic_Alpha_Unwind,
+        Ic_Beta_Focus
+      ];
   }
 }

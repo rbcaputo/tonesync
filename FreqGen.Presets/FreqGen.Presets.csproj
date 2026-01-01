@@ -4,16 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-
-    <!-- Assembly metadata -->
     <AssemblyName>FreqGen.Presets</AssemblyName>
-    <RootNamespace>FreqGen.Presets</RootNamespace>
-    <Version>1.0.0</Version>
-
-    <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

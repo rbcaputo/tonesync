@@ -1,26 +1,27 @@
 ﻿namespace FreqGen.Core.Nodes.Modulators
 {
   /// <summary>
-  /// Amplitude Modulation processor.
-  /// Applies smooth AM to a carrier signal using an LFO.
+  /// Static processor for applying Amplitude Modulation (AM).
+  /// Implements the formula: Carrier * (1 + Depth * Modulator).
   /// </summary>
   public sealed class AMModulator
   {
     /// <summary>
-    /// Modulation depth (0.0 = no modulation, 1.0 = full modulation).
-    /// Safe to update from any thread.
+    /// Gets or sets the intensity of the modulation effect (0.0 to 1.0).
     /// </summary>
     public float Depth { get; set; } = 0.5f;
 
     /// <summary>
-    /// Apply amplitude modulation to a carrier signal.
+    /// Applies amplitude modulation to an existing audio buffer.
     /// </summary>
-    /// <param name="carrier">Input carrier signal</param>
-    /// <param name="modulator">LFO signal in range [-1, 1]</param>
-    /// <returns>Modulated signal</returns>
-    public float Apply(float carrier, float modulator) =>
-      // Transform modulator from [-1, 1] to [1 - depth, 1 + depth]
-      // This ensures the signal never inverts phase
-      carrier * (1f + Depth * modulator);
+    /// <param name="audioBuffer">The buffer containing carrier signal (modified in place).</param>
+    /// <param name="modulatorBuffer">The buffer containing the LFO/Modulator signal.</param>
+    /// <param name="depth">The intensity of modulation (0.0 to 1.0).</param>
+    public static void Apply(Span<float> audioBuffer, ReadOnlySpan<float> modulatorBuffer, float depth)
+    {
+      for (int i = 0; i < audioBuffer.Length; i++)
+        // Ensures signal stays positive and follows the reference formula
+        audioBuffer[i] *= 1.0f + (depth * modulatorBuffer[i]);
+    }
   }
 }

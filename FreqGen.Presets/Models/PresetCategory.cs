@@ -1,32 +1,28 @@
 ﻿namespace FreqGen.Presets.Models
 {
   /// <summary>
-  /// Categories of frequency presets.
+  /// Categorizes presets based on their therapeutic or mathematical approach.
   /// </summary>
   public enum PresetCategory
   {
     /// <summary>
-    /// Brainwave entrainment frequencies (Delta, Theta, Alpha, Beta, Gamma).
+    /// Amplitude modulation based on neural oscillation bands (0.5-100Hz).
     /// </summary>
     Brainwave,
-
     /// <summary>
-    /// Solfeggio frequencies (396, 417, 528, 639, 741, 852 Hz)
+    /// Ancient 6-tone scale frequencies (e.g., 528Hz).
     /// </summary>
     Solfeggio,
-
     /// <summary>
-    /// Isochronic tones with rhythmic pulsing.
+    /// Rhythmic pulsing using high-depth modulation or square waves.
     /// </summary>
     Isochronic,
-
     /// <summary>
-    /// Binaural beats (stereo only).
+    /// Stereo-field phase offsets for binaural entrainment.
     /// </summary>
     Binaural,
-
     /// <summary>
-    /// User-defined or experimental presets.
+    /// User-created or experimental configurations.
     /// </summary>
     Custom
   }

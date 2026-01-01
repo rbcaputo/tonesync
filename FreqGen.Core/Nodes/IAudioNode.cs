@@ -1,15 +1,20 @@
 ﻿namespace FreqGen.Core.Nodes
 {
   /// <summary>
-  /// Base interface for all audio processing nodes.
-  /// Each node produces one sample per tick at audio rate.
+  /// Defines the contract for all audio processing nodes within the FreqGen engine.
+  /// Supports high-performance block processing to minimize virtual call overhead and enable SIMD.
   /// </summary>
   public interface IAudioNode
   {
     /// <summary>
-    /// Generate the next audio sample.
+    /// Processes a block of audio data into the provided buffer.
     /// </summary>
-    /// <returns>Audio sample in range [-1.0, 1.0]</returns>
-    public float NextSample();
+    /// <param name="buffer">The memory span to populate or modify with audio samples.</param>
+    public void Process(Span<float> buffer);
+
+    /// <summary>
+    /// Resets the internal state (phase, filters, etc.) to zero.
+    /// </summary>
+    void Reset();
   }
 }

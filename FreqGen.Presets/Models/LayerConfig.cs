@@ -1,8 +1,10 @@
-﻿namespace FreqGen.Presets.Models
+﻿using FreqGen.Core;
+
+namespace FreqGen.Presets.Models
 {
   /// <summary>
-  /// Configuration for a single layer in a preset.
-  /// Maps to FreqGen.Core.LayerConfiguration.
+  /// Represents the human-readable configuration for a single audio layer.
+  /// Includes metadata for UI display and mapping logic for the Core engine.
   /// </summary>
   public sealed record LayerConfig
   {
@@ -32,46 +34,20 @@
     public string? Description { get; init; }
 
     /// <summary>
-    /// Convert to Core LayerConfig.
+    /// Maps this domain model to the Core engine's high-performance configuration record.
     /// </summary>
-    public Core.LayerConfiguration ToLayerConfig() =>
+    /// <param name="isActive">Whether this layer should currently be audible.</param>
+    public LayerConfiguration ToCoreConfig(bool isActive) =>
+      new(CarrierHz, ModulationHz, ModulationDepth, Weight, isActive);
+
+    public static LayerConfig PureTone(float frequency, float weight = 1.0f) =>
       new()
       {
-        CarrierHz = CarrierHz,
-        ModulationHz = ModulationHz,
-        ModulationDepth = ModulationDepth,
-        Weight = Weight,
+        CarrierHz = frequency,
+        ModulationHz = 0f,
+        ModulationDepth = 0f,
+        Weight = weight,
+        Description = "Fundamental Pure Tone"
       };
-
-    public static LayerConfig PureTone(
-      float frequency,
-      float weight = 1f,
-      string? description = null
-    ) => new()
-    {
-      CarrierHz = frequency,
-      ModulationHz = 0f,
-      ModulationDepth = 0f,
-      Weight = weight,
-      Description = description
-    };
-
-    /// <summary>
-    /// Create a modulated layer for brainwave entrainment.
-    /// </summary>
-    public static LayerConfig BrainwaveLayer(
-      float carrierHz,
-      float brainwaveHz,
-      float depth = 0.8f,
-      float weight = 1f,
-      string? description = null
-    ) => new()
-    {
-      CarrierHz = carrierHz,
-      ModulationHz = brainwaveHz,
-      ModulationDepth = depth,
-      Weight = weight,
-      Description = description
-    };
   }
 }

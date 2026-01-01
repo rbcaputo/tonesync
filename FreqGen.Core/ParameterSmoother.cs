@@ -1,20 +1,27 @@
 ﻿namespace FreqGen.Core
 {
-  public sealed class ParameterSmoother(float smoothingTime, float sampleRate)
+  /// <summary>
+  /// Provides linear-to-exponential smoothing for parameters to prevent "zipper noise."
+  /// </summary>
+  public sealed class ParameterSmoother(float initialValue, float smoothingFactor = 0.001f)
   {
-    private readonly float _smoothingCoef = 1f - MathF.Exp(-1f / (smoothingTime * sampleRate));
-    private float _current;
-    private float _target;
+    private float _current = initialValue;
+    private float _target = initialValue;
 
-    public float Current => _current;
+    public float Value => _current;
 
-    public void SetTarget(float value) =>
-      _target = value;
+    /// <summary>
+    /// Sets a new target value for the parameter.
+    /// </summary>
+    public void SetTarget(float target) =>
+      _target = target;
 
-    public float Next()
+    /// <summary>
+    /// Calculates the next smoothed value. Should be called per-sample or per-block.
+    /// </summary>
+    public float Step()
     {
-      _current += (_target - _current) * _smoothingCoef;
-
+      _current += (_target - _current) * smoothingFactor;
       return _current;
     }
   }
