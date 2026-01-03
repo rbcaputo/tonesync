@@ -26,9 +26,7 @@ namespace FreqGen.App.Views
 
       // Ensure audio stops when page is not visible
       if (_viewModel.IsPlaying)
-      {
-        _ = _viewModel.StopCommand.ExecuteAsync(null);
-      }
+        _viewModel.StopCommand.ExecuteAsync(null);
     }
   }
 }

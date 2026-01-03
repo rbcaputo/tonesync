@@ -6,7 +6,8 @@ using Microsoft.Extensions.Logging;
 namespace FreqGen.App.Services
 {
   /// <summary>
-  /// Android-specific audio implementation.
+  /// Android-specific audio implementation using AudioTrack.
+  /// Optimized for low-latency real-time audio playback.
   /// </summary>
   public sealed partial class AudioService
   {
@@ -14,111 +15,227 @@ namespace FreqGen.App.Services
     private Thread? _audioThread;
     private volatile bool _isAudioThreadRunning;
 
-    private readonly float[] _floatBuffer = new float[AudioSettings.BufferSize];
-    private readonly short[] _pcmBuffer = new short[AudioSettings.BufferSize];
+    // Pre-allocated buffers (no allocations in audio loop)
+    private readonly float[] _floatBuffer = new float[AudioSettings.RecommendedBufferSize];
+    private readonly short[] _pcmBuffer = new short[AudioSettings.RecommendedBufferSize];
 
     partial void InitializePlatformAudio()
     {
-      int minBufferSize = AudioTrack.GetMinBufferSize(
-        AudioSettings.SampleRate,
-        ChannelOut.Mono,
-        Encoding.Pcm16bit
-      );
+      _logger.LogInformation("Initializing Android AudioTrack");
 
-      int trackBufferSize = Math.Max(
-        minBufferSize,
-        AudioSettings.BufferSize * sizeof(short) * 4
-      );
+      try
+      {
+        // Query minimum buffer size
+        int minBufferSize = AudioTrack.GetMinBufferSize(
+          AudioSettings.SampleRate,
+          ChannelOut.Mono,
+          Encoding.Pcm16bit
+        );
 
-      AudioAttributes? audioAttributes = new AudioAttributes.Builder()
-        .SetUsage(AudioUsageKind.Media)?
-        .SetContentType(AudioContentType.Music)?
-        .Build();
+        if (minBufferSize == (int)TrackStatus.ErrorBadValue)
+          throw new InvalidOperationException("Invalid audio format for this device");
 
-      AudioFormat? audioFormat = new AudioFormat.Builder()
-        .SetSampleRate(AudioSettings.SampleRate)?
-        .SetEncoding(Encoding.Pcm16bit)?
-        .SetChannelMask(ChannelOut.Mono)
-        .Build();
+        // Use larger buffer for stability (4x minimum)
+        int bufferSizeInBytes = Math.Max(
+          minBufferSize,
+          AudioSettings.RecommendedBufferSize * sizeof(short) * 4
+        );
 
-      AudioTrack.Builder builder = new AudioTrack.Builder()
-        .SetAudioAttributes(audioAttributes!)
-        .SetAudioFormat(audioFormat!)
-        .SetBufferSizeInBytes(trackBufferSize)
-        .SetTransferMode(AudioTrackMode.Stream);
+        _logger.LogDebug(
+          "AudioTrack buffer: min={MinSize}, using={ActualSize}",
+          minBufferSize,
+          bufferSizeInBytes
+        );
 
-      if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-        builder.SetPerformanceMode(AudioTrackPerformanceMode.LowLatency);
+        // Configure audio attributes
+        AudioAttributes? audioAttributes = new AudioAttributes.Builder()?
+          .SetUsage(AudioUsageKind.Media)?
+          .SetContentType(AudioContentType.Music)?
+          .Build();
 
-      _audioTrack = builder.Build();
+        // Configure audio format
+        AudioFormat? audioFormat = new AudioFormat.Builder()?
+          .SetSampleRate(AudioSettings.SampleRate)?
+          .SetEncoding(Encoding.Pcm16bit)?
+          .SetChannelMask(ChannelOut.Mono)?
+          .Build();
+
+        if (audioAttributes is null || audioFormat is null)
+          throw new InvalidOperationException("Failed to create audio configuration");
+
+        // Build AudioTrack
+        AudioTrack.Builder builder = new AudioTrack.Builder()
+          .SetAudioAttributes(audioAttributes)
+          .SetAudioFormat(audioFormat)
+          .SetBufferSizeInBytes(bufferSizeInBytes)
+          .SetTransferMode(AudioTrackMode.Stream);
+
+        // Enable low-latency mode on Android 8.0+
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        {
+          builder.SetPerformanceMode(AudioTrackPerformanceMode.LowLatency);
+          _logger.LogDebug("Low-latency mode enabled");
+        }
+
+        _audioTrack = builder.Build();
+
+        if (_audioTrack is null)
+          throw new InvalidOperationException("Failed to create AudioTrack");
+
+        _logger.LogInformation("Android AudioTrack initialized successfully");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to initialize Android audio");
+        throw new InvalidOperationException("Android audio initialization failed", ex);
+      }
     }
 
     partial void StartPlatformAudio()
     {
-      if (_isAudioThreadRunning || _audioTrack == null || _engine == null)
+      if (_isAudioThreadRunning || _audioTrack is null || _engine is null)
         return;
 
-      _isAudioThreadRunning = true;
-      _audioTrack.Play();
+      _logger.LogInformation("Starting Android audio thread");
 
-      _audioThread = new(AudioLoop)
+      try
       {
-        Name = "FreqGen-AudioThread",
-        IsBackground = true,
-        Priority = System.Threading.ThreadPriority.Highest
-      };
+        // Start AudioTrack playback
+        _audioTrack.Play();
 
-      _audioThread.Start();
+        // Start audio rendering thread
+        _isAudioThreadRunning = true;
+        _audioThread = new(AudioThreadLoop)
+        {
+          Name = "FreqGen-Android-AudioThread",
+          IsBackground = true,
+          Priority = System.Threading.ThreadPriority.Highest
+        };
+
+        _audioThread.Start();
+        _logger.LogInformation("Android audio thread started");
+      }
+      catch (Exception ex)
+      {
+        _isAudioThreadRunning = false;
+        _logger.LogError(ex, "Failed to start Android audio");
+        throw new InvalidOperationException("Failed to start Android audio", ex);
+      }
     }
-
 
     partial void StopPlatformAudio()
     {
-      _isAudioThreadRunning = false;
-      _audioThread?.Join(TimeSpan.FromSeconds(2));
+      if (!_isAudioThreadRunning)
+        return;
 
-      _audioTrack?.Stop();
-      _audioTrack?.Flush();
-    }
+      _logger.LogInformation("Stopping Android audio thread");
 
-    private void AudioLoop()
-    {
-      // Set thread priority for real-time audio
-      Process.SetThreadPriority(Android.OS.ThreadPriority.UrgentAudio);
-
-      while (_isAudioThreadRunning)
+      try
       {
-        try
-        {
-          AudioEngine? engine = _engine; // Local copy for thread safety
-          AudioTrack? audioTrack = _audioTrack;
+        // Signal thread to stop
+        _isAudioThreadRunning = false;
 
-          if (engine is null || audioTrack is null || !_isAudioThreadRunning)
-            break;
+        // Wait for thread to exit (with timeout)
+        if (_audioThread is not null && _audioThread.IsAlive)
+          if (!_audioThread.Join(TimeSpan.FromSeconds(2)))
+            _logger.LogWarning("Audio thread did not stop gracefully");
 
-          // Fill buffer from audio engine
-          engine.FillBuffer(_floatBuffer);
+        // Stop and flush AudioTrack
+        _audioTrack?.Stop();
+        _audioTrack?.Flush();
 
-          // Convert float to PCM16
-          for (int i = 0; i < _floatBuffer.Length; i++)
-            _pcmBuffer[i] = (short)(_floatBuffer[i] * 32767f);
-
-          // Write to audio track
-          audioTrack.Write(_pcmBuffer, 0, _pcmBuffer.Length, WriteMode.Blocking);
-        }
-        catch (Exception ex)
-        {
-          _logger.LogError($"Audio loop error: {ex}");
-          break;
-        }
+        _logger.LogInformation("Android audio thread stopped");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error stopping Android audio");
       }
     }
 
     partial void DisposePlatformAudio()
     {
-      _audioTrack?.Release();
-      _audioTrack?.Dispose();
-      _audioTrack = null;
+      try
+      {
+        _audioTrack?.Release();
+        _audioTrack?.Dispose();
+        _audioTrack = null;
+        _audioThread = null;
+
+        _logger.LogInformation("Android audio resources disposed");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error disposing Android audio");
+      }
+    }
+
+    /// <summary>
+    /// Audio rendering loop running on dedicated high-priority thread.
+    /// This is the HOT PATH - must be allocation-free and deterministic.
+    /// </summary>
+    private void AudioThreadLoop()
+    {
+      // Set real-time audio priority
+      try
+      {
+        Process.SetThreadPriority(Android.OS.ThreadPriority.UrgentAudio);
+        _logger.LogDebug("Audio thread priority set to URGENT_AUDIO");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogWarning(ex, "Failed to set audio thread priority");
+      }
+
+      _logger.LogInformation("Audio thread loop started");
+
+      while (_isAudioThreadRunning)
+      {
+        try
+        {
+          // Local copies for thread safety (avoid torn reads)
+          AudioEngine? engine = _engine;
+          AudioTrack? audioTrack = _audioTrack;
+
+          if (engine is null || audioTrack is null || !_isAudioThreadRunning)
+            break;
+
+          // Fill buffer from audio engine (HOT PATH)
+          engine.FillBuffer(_floatBuffer.AsSpan());
+
+          // Convert float [-1.0, 1.0] to PCM16 [-32768, 32767]
+          for (int i = 0; i < _floatBuffer.Length; i++)
+          {
+            float sample = _floatBuffer[i];
+
+            // Clamp for safety (should already be clamped by engine)
+            sample = Math.Clamp(sample, -1.0f, 1.0f);
+
+            // Convert to PCM16
+            _pcmBuffer[i] = (short)(sample * 32767f);
+          }
+
+          // Write to AudioTrack (blocking write)
+          int bytesWritten = audioTrack.Write(
+            _pcmBuffer,
+            0,
+            _pcmBuffer.Length,
+            WriteMode.Blocking
+          );
+
+          if (bytesWritten < 0)
+          {
+            _logger.LogError("AudioTrack write error: {ErrorCode}", bytesWritten);
+            break;
+          }
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Audio thread loop error");
+          break;
+        }
+      }
+
+      _logger.LogInformation("Audio thread loop exited");
     }
   }
 }

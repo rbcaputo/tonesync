@@ -7,6 +7,7 @@ namespace FreqGen.App.Services
 {
   /// <summary>
   /// iOS-specific audio implementation using AVAudioEngine.
+  /// Optimized for Core Audio real-time rendering.
   /// </summary>
   public sealed partial class AudioService
   {
@@ -14,53 +15,87 @@ namespace FreqGen.App.Services
     private AVAudioSourceNode? _sourceNode;
     private AVAudioFormat? _audioFormat;
 
-    private float[] _iosRenderBuffer = new float[Core.AudioSettings.BufferSize * 4];
+    // Pre-allocated render buffer (no allocations in callback)
+    private readonly float[] _iosRenderBuffer = new float[Core.AudioSettings.MaxBufferSize];
 
     partial void InitializePlatformAudio()
     {
-      // Configure audio session
-      AVAudioSession audioSession = AVAudioSession.SharedInstance();
-      audioSession.SetCategory(AVAudioSessionCategory.Playback);
-      audioSession.SetActive(true, out NSError error);
+      _logger.LogInformation("Initializing iOS AVAudioEngine");
 
-      if (error is not null)
-        throw new InvalidOperationException($"Failed to activate audio session: {error}");
-
-      // Create audio engine
-      _avAudioEngine = new();
-
-      // Create audio format (mono 44.1kHz, float32)
-      _audioFormat = new(
-        sampleRate: Core.AudioSettings.SampleRate,
-        channels: 1
-      );
-
-      if (_audioFormat is null)
-        throw new InvalidOperationException("Failed to create audio format");
-
-      // Create source node
-      _sourceNode = new(_audioFormat, (isSilencePtr, timestampPtr, frameCount, audioBufferListPtr) =>
+      try
       {
-        unsafe
-        {
-          bool isSilence = *(bool*)isSilencePtr;
-          AudioTimeStamp timestamp = *(AudioTimeStamp*)timestampPtr;
-          AudioBufferList audioBufferList = *(AudioBufferList*)audioBufferListPtr;
+        // Configure audio session for playback
+        AVAudioSession audioSession = AVAudioSession.SharedInstance();
 
-          return RenderAudio(isSilence, timestamp, frameCount, audioBufferList);
-        }
-      });
+        // SetCategory requires NSString, not AVAudioSessionCategory enum
+        bool categoryResult = audioSession.SetCategory(
+          AVAudioSession.CategoryPlayback,
+          out NSError sessionError
+        );
 
-      // Connect nodes
-      _avAudioEngine.AttachNode(_sourceNode);
-      _avAudioEngine.Connect(
-        _sourceNode,
-        _avAudioEngine.MainMixerNode,
-        _audioFormat
-      );
+        if (!categoryResult || sessionError is not null)
+          throw new InvalidOperationException(
+            $"Failed to set audio category: {sessionError?.LocalizedDescription ?? "Unknown error"}"
+          );
 
-      // Prepare engine
-      _avAudioEngine.Prepare();
+        bool activeResult = audioSession.SetActive(true, out sessionError);
+
+        if (!activeResult || sessionError is not null)
+          throw new InvalidOperationException(
+            $"Failed to activate audio session: {sessionError?.LocalizedDescription ?? "Unknown error"}"
+          );
+
+        _logger.LogDebug("Audio session configured: Category=Playback");
+
+        // Create audio engine
+        _avAudioEngine = new();
+
+        // Create audio format (mono, 44.1kHz, float32)
+        _audioFormat = new(
+          sampleRate: Core.AudioSettings.SampleRate,
+          channels: 1
+        );
+
+        if (_audioFormat is null)
+          throw new InvalidOperationException("Failed to create audio format");
+
+        _logger.LogDebug(
+          "Audio format: SampleRate={SampleRate}, Channels={Channels}",
+          _audioFormat.SampleRate,
+          _audioFormat.ChannelCount
+        );
+
+        // Create source node with render callback
+        _sourceNode = new((
+          ref isSilence,
+          ref timestamp,
+          frameCount,
+          audioBuffers
+        ) => RenderBlock(ref isSilence, ref timestamp, frameCount, audioBuffers));
+
+        if (_sourceNode is null)
+          throw new InvalidOperationException("Failed to create source node");
+
+        // Attach node to engine
+        _avAudioEngine.AttachNode(_sourceNode);
+
+        // Connect source node to main mixer
+        _avAudioEngine.Connect(
+          _sourceNode,
+          _avAudioEngine.MainMixerNode,
+          _audioFormat
+        );
+
+        // Prepare engine for playback
+        _avAudioEngine.Prepare();
+
+        _logger.LogInformation("iOS AVAudioEngine initialized successfully");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to initialize iOS audio");
+        throw new InvalidOperationException("iOS audio initialization failed", ex);
+      }
     }
 
     partial void StartPlatformAudio()
@@ -68,17 +103,23 @@ namespace FreqGen.App.Services
       if (_avAudioEngine is null || _avAudioEngine.Running)
         return;
 
+      _logger.LogInformation("Starting iOS audio engine");
+
       try
       {
-        _avAudioEngine.StartAndReturnError(out NSError error);
+        _avAudioEngine.StartAndReturnError(out NSError? error);
 
         if (error is not null)
-          throw new InvalidOperationException($"Failed to start audio engine: {error}");
+          throw new InvalidOperationException(
+            $"Failed to start audio engine: {error.LocalizedDescription}"
+          );
+
+        _logger.LogInformation("iOS audio engine started");
       }
       catch (Exception ex)
       {
-        _logger.LogError($"iOS audio start failed: {ex}");
-        throw;
+        _logger.LogError(ex, "Failed to start iOS audio");
+        throw new InvalidOperationException("Failed to start iOS audio", ex);
       }
     }
 
@@ -87,58 +128,102 @@ namespace FreqGen.App.Services
       if (_avAudioEngine is null || !_avAudioEngine.Running)
         return;
 
-      _avAudioEngine.Stop();
+      _logger.LogInformation("Stopping iOS audio engine");
+
+      try
+      {
+        _avAudioEngine.Stop();
+        _logger.LogInformation("iOS audio engine stopped");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error stopping iOS audio");
+      }
     }
 
     partial void DisposePlatformAudio()
     {
-      if (_avAudioEngine?.Running == true)
-        _avAudioEngine.Stop();
-
-      _sourceNode?.Dispose();
-      _avAudioEngine?.Dispose();
-
-      _sourceNode = null;
-      _avAudioEngine = null;
-      _audioFormat = null;
-    }
-
-    private unsafe int RenderAudio(
-      bool isSilence,
-      AudioTimeStamp timeStamp,
-      uint frameCount,
-      AudioBufferList audioBufferList
-    )
-    {
-      if (_engine is null || isSilence)
-        return 0;
-
       try
       {
-        // Get the audio buffer
-        AudioBuffer* buffer = audioBufferList.GetBuffer(0);
-        if (buffer is null || buffer->Data == IntPtr.Zero)
-          return -1;
+        if (_avAudioEngine?.Running == true)
+          _avAudioEngine.Stop();
 
-        float* floatPtr = (float*)buffer->Data;
+        _sourceNode?.Dispose();
+        _avAudioEngine?.Dispose();
 
-        // Validate frameCount
-        if (frameCount > _iosRenderBuffer.Length)
-          frameCount = (uint)_iosRenderBuffer.Length;
+        _sourceNode = null;
+        _avAudioEngine = null;
+        _audioFormat = null;
 
-        // Fill temporary buffer from engine
-        _engine.FillBuffer(_iosRenderBuffer.AsSpan(0, (int)frameCount));
-
-        // Copy to output buffer
-        for (int i = 0; i < frameCount; i++)
-          floatPtr[i] = _iosRenderBuffer[i];
-
-        return 0;
+        _logger.LogInformation("iOS audio resources disposed");
       }
       catch (Exception ex)
       {
-        _logger.LogError($"iOS render error: {ex}");
-        return -1;
+        _logger.LogError(ex, "Error disposing iOS audio");
+      }
+    }
+
+
+    /// <summary>
+    /// Render block for AVAudioSourceNode.
+    /// Invoked by Core Audio on real-time thread for audio generation.
+    /// This is the HOT PATH - must be allocation-free and deterministic.
+    /// </summary>
+    /// <returns>0 for success (noErr), non-zero for error.</returns>
+    private unsafe int RenderBlock(
+      ref bool isSilence,
+      ref AudioTimeStamp timestamp,
+      uint frameCount,
+      AudioBuffers audioBuffers
+    )
+    {
+      // Fast path: return silence if requested
+      if (isSilence || _engine is null)
+        return 0; // noErr
+
+      try
+      {
+        // Get audio buffer from AudioBuffers
+        // Access the first buffer
+        AudioBuffer buffer = audioBuffers[0];
+
+        if (buffer.Data == IntPtr.Zero)
+          return -1; // Error: no buffer
+
+        unsafe
+        {
+          float* outputPtr = (float*)buffer.Data;
+
+          // Validate frame count
+          if (frameCount > _iosRenderBuffer.Length)
+          {
+            // Log on background thread (not in render callback)
+            Task.Run(() => _logger.LogWarning(
+              "Frame count {FrameCount} exceeds buffer size {BufferSize}, clamping",
+              frameCount,
+              _iosRenderBuffer.Length
+            ));
+
+            frameCount = (uint)_iosRenderBuffer.Length;
+          }
+
+          // Fill buffer from audio engine (HOT PATH)
+          Span<float> renderSpan = _iosRenderBuffer.AsSpan(0, (int)frameCount);
+          _engine.FillBuffer(renderSpan);
+
+          // Copy to Core Audio buffer
+          for (int i = 0; i < frameCount; i++)
+            outputPtr[i] = _iosRenderBuffer[i];
+
+          return 0; // noErr
+        }
+      }
+      catch (Exception ex)
+      {
+        // CRITICAL: Never throw from audio callback
+        // Log on background thread
+        Task.Run(() => _logger.LogError(ex, "iOS render callback error"));
+        return -1; // Error
       }
     }
   }

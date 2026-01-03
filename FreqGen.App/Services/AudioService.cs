@@ -1,5 +1,4 @@
 ﻿using FreqGen.Core;
-using FreqGen.Core.Exceptions;
 using FreqGen.Presets.Models;
 using FreqGen.Presets.Presets;
 using Microsoft.Extensions.Logging;
@@ -8,22 +7,31 @@ namespace FreqGen.App.Services
 {
   /// <summary>
   /// Cross-platform audio service implementation.
+  /// Manages AudioEngine and PresetEngine lifecycle with proper error handling.
   /// </summary>
   public sealed partial class AudioService(ILogger<AudioService> logger) : IAudioService, IAsyncDisposable
   {
-    private readonly ILogger<AudioService> _logger = logger;
+    private readonly ILogger<AudioService> _logger = logger
+      ?? throw new ArgumentNullException(nameof(logger));
     private AudioEngine? _engine;
     private PresetEngine? _presetEngine;
     private bool _isInitialized;
-    private bool _isPlaying;
-    private int _retryCount;
-    private const int MaxRetries = 3;
+    private bool _isDisposed;
 
-    public bool IsPlaying => _isPlaying;
-    public FrequencyPreset? CurrentPreset => _presetEngine?.CurrentPreset;
+    // Error handling
+    private const int MaxInitRetries = 3;
+    private int _initRetryCount;
+
+    public bool IsPlaying => _engine?.IsPlaying ?? false;
+
+    public FrequencyPreset? CurrentPreset => _presetEngine?.ActivePreset;
+
+    public event EventHandler<AudioErrorEventArgs>? AudioError;
 
     public async Task InitializeAsync()
     {
+      ObjectDisposedException.ThrowIf(_isDisposed, this);
+
       if (_isInitialized)
         return;
 
@@ -32,10 +40,10 @@ namespace FreqGen.App.Services
         _logger.LogInformation("Initializing audio service...");
 
         // Create core audio engine
-        _engine = new(
-          sampleRate: AudioSettings.SampleRate,
-          layerCount: 6 // Support complex presets
-        );
+        _engine = new(AudioSettings.SampleRate);
+
+        // Subscribe to critical errors
+        _engine.CriticalError += OnEngineCriticalError;
 
         // Create preset engine
         _presetEngine = new(_engine);
@@ -44,19 +52,18 @@ namespace FreqGen.App.Services
         InitializePlatformAudio();
 
         _isInitialized = true;
-        _retryCount = 0;
+        _initRetryCount = 0;
 
         _logger.LogInformation("Audio service initialized successfully");
       }
-      catch (AudioInitializationException ex)
-      {
-        _logger.LogError($"Audio initialization failed: {ex.Message}");
-        throw;
-      }
       catch (Exception ex)
       {
-        _logger.LogError($"Unexpected error during initialization: {ex}");
-        throw new AudioInitializationException("Audio initialization failed", ex);
+        _logger.LogError($"Audio initialization failed");
+
+        // Clean up on failure
+        await CleanupAsync();
+
+        throw new InvalidOperationException("Failed to initialize audio system", ex);
       }
 
       await Task.CompletedTask;
@@ -65,6 +72,7 @@ namespace FreqGen.App.Services
     public async Task PlayPresetAsync(FrequencyPreset preset)
     {
       ArgumentNullException.ThrowIfNull(preset);
+      ObjectDisposedException.ThrowIf(_isDisposed, this);
 
       if (!_isInitialized)
       {
@@ -74,121 +82,191 @@ namespace FreqGen.App.Services
 
       try
       {
-        _logger.LogInformation($"Playing preset: {preset.DisplayName}");
+        _logger.LogInformation("Playing preset: {PresetName}", preset.DisplayName);
 
-        // Validate preset before loading
-        preset.Validate();
-
-        // Stop current playback
-        if (_isPlaying)
+        // Stop current playback if any
+        if (IsPlaying)
         {
           _logger.LogDebug("Stopping current playback");
           await StopAsync();
         }
 
-        // Load and play preset
-        _presetEngine?.LoadAndPlay(preset);
+        // Brief delay to allow clean stop
+        await Task.Delay(100);
 
-        // Start platform audio
+        // Load preset (validates and initialize engine)
+        _presetEngine?.LoadPreset(
+          preset,
+          AudioSettings.Envelope.DefaultAttackSeconds,
+          AudioSettings.Envelope.DefaultReleaseSeconds
+        );
+
+        // Start platform audio thread
         StartPlatformAudio();
 
-        _isPlaying = true;
-        _retryCount = 0;
+        // Start playback
+        _presetEngine?.StartPlayback();
 
-        _logger.LogInformation($"Successfully started preset: {preset.DisplayName}");
-      }
-      catch (PresetValidationException ex)
-      {
-        _logger.LogError($"Preset validation failed: {ex.Message}");
-        throw;
-      }
-      catch (AudioPlaybackException ex)
-      {
-        _logger.LogError($"Playback failed: {ex.Message}");
-
-        // Attempt retry if we haven't exceeded max retries
-        if (_retryCount < MaxRetries)
-        {
-          _retryCount++;
-          _logger.LogWarning($"Retrying playback (attempt {_retryCount}/{MaxRetries})...");
-          await Task.Delay(500); // Brief delay before retry
-          await PlayPresetAsync(preset);
-          return;
-        }
-
-        throw;
+        _logger.LogInformation("Successfully started preset: {PresetName}", preset.DisplayName);
       }
       catch (Exception ex)
       {
-        _logger.LogError($"Unexpected error during playback: {ex}");
-        throw new AudioPlaybackException("Failed to start playback", ex);
+        _logger.LogError(ex, "Failed to play preset: {PresetName}", preset.DisplayName);
+
+        // Ensure clean state on failure
+        try
+        {
+          await StopAsync();
+        }
+        catch
+        {
+          // Ignore errors during cleanup
+        }
+
+        throw new InvalidOperationException($"Failed to play preset: {preset.DisplayName}", ex);
       }
     }
 
     public async Task StopAsync()
     {
-      if (!_isPlaying)
+      ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+      if (!IsPlaying)
         return;
 
       try
       {
         _logger.LogInformation("Stopping audio playback");
 
-        // Stop preset engine (begins fade-out)
-        _presetEngine?.Stop();
+        // Stop preset engine (triggers release phase)
+        _presetEngine?.StopPlayback();
 
-        // Stop platform audio
+        // Allow release phase to complete (brief delay)
+        await Task.Delay(50);
+
+        // Stop platform audio thread
         StopPlatformAudio();
-
-        _isPlaying = false;
 
         _logger.LogInformation("Audio playback stopped successfully");
       }
       catch (Exception ex)
       {
-        _logger.LogError($"Error while stopping: {ex}");
-        throw new AudioPlaybackException("Failed to stop playback", ex);
+        _logger.LogError(ex, "Error while stopping playback");
+        throw new InvalidOperationException("Failed to stop playback", ex);
       }
-
-      await Task.CompletedTask;
     }
 
     public async Task<bool> RetryInitializationAsync()
     {
-      _logger.LogInformation("Retrying audio initialization...");
+      if (_initRetryCount >= MaxInitRetries)
+      {
+        _logger.LogError("Maximum initialization retries ({MaxRetries}) exceeded", MaxInitRetries);
+        return false;
+      }
+
+      _initRetryCount++;
+      _logger.LogInformation(
+        "Retrying audio initialization (attempt {Attempt}/{MaxAttempts})",
+        _initRetryCount,
+        MaxInitRetries
+      );
 
       try
       {
-        // Dispose existing resources
-        await DisposeAsync();
+        // Clean up existing resources
+        await CleanupAsync();
 
-        // Wait a moment
-        await Task.Delay(1000);
+        // Wait before retry
+        await Task.Delay(500);
 
-        // Try again
+        // Try initialization again
         await InitializeAsync();
+
         return true;
       }
       catch (Exception ex)
       {
-        _logger.LogError($"Retry failed: {ex}");
+        _logger.LogError(ex, "Initialization retry failed");
         return false;
       }
     }
 
     public async ValueTask DisposeAsync()
     {
-      if (_isPlaying)
-        await StopAsync();
+      if (_isDisposed)
+        return;
 
-      DisposePlatformAudio();
+      _logger.LogInformation("Disposing audio service");
 
-      _engine?.Dispose();
-      _engine = null;
-      _presetEngine = null;
-      _isInitialized = false;
+      await CleanupAsync();
+
+      _isDisposed = true;
 
       _logger.LogInformation("Audio service disposed");
+
+      DisposePlatformAudio();
+    }
+
+    /// <summary>
+    /// Cleans up all resources without throwing exceptions.
+    /// </summary>
+    private async Task CleanupAsync()
+    {
+      try
+      {
+        if (IsPlaying)
+          await StopAsync();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogWarning(ex, "Error during stop in cleanup");
+      }
+
+      try
+      {
+        DisposePlatformAudio();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogWarning(ex, "Error during platform cleanup");
+      }
+
+      if (_engine is not null)
+      {
+        _engine.CriticalError -= OnEngineCriticalError;
+        _engine.Dispose();
+        _engine = null;
+      }
+
+      _presetEngine = null;
+      _isInitialized = false;
+    }
+
+    /// <summary>
+    /// Handles critical errors from the audio engine.
+    /// Raised on background thread, not audio callback thread.
+    /// </summary>
+    private void OnEngineCriticalError(object? sender, AudioEngine.AudioErrorEventArgs ev)
+    {
+      _logger.LogCritical(
+        ev.Error,
+        "Critical audio engine error after {Count} consecutive errors",
+        ev.ConsecutiveErrorCount
+      );
+
+      // Forward error to service subscribers
+      try
+      {
+        AudioError?.Invoke(this, new(
+          ev.Error.Message,
+          ev.ConsecutiveErrorCount,
+          canRetry: _initRetryCount < MaxInitRetries
+        ));
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error while raising AudioError event");
+      }
     }
 
     // Platform-specific methods (implemented in partial classes)
@@ -196,5 +274,39 @@ namespace FreqGen.App.Services
     partial void StartPlatformAudio();
     partial void StopPlatformAudio();
     partial void DisposePlatformAudio();
+
+    /// <summary>
+    /// Event arguments for audio service errors.
+    /// </summary>
+    public sealed class AudioErrorEventArgs : EventArgs
+    {
+      /// <summary>
+      /// Gets the error message.
+      /// </summary>
+      public string Message { get; }
+
+      /// <summary>
+      /// Gets the number of consecutive errors that occurred.
+      /// </summary>
+      public int ConsecutiveErrorCount { get; }
+
+      /// <summary>
+      /// Gets a value indicating whether retry is possible.
+      /// </summary>
+      public bool CanRetry { get; }
+
+      /// <summary>
+      /// Gets the timestamp when the error occurred.
+      /// </summary>
+      public DateTime Timestamp { get; }
+
+      internal AudioErrorEventArgs(string message, int consecutiveErrorCount, bool canRetry)
+      {
+        Message = message ?? throw new ArgumentNullException(nameof(message));
+        ConsecutiveErrorCount = consecutiveErrorCount;
+        CanRetry = canRetry;
+        Timestamp = DateTime.UtcNow;
+      }
+    }
   }
 }
