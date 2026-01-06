@@ -1,22 +1,49 @@
-﻿using System.Runtime.CompilerServices;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using FreqGen.Core.Layers;
+using System.Runtime.CompilerServices;
 
 namespace FreqGen.Core
 {
   /// <summary>
-  /// Sums multiple audio layers into a single output stream with safety clamping.
-  /// Pre-allocates all layers to avoid runtime allocations in audio callback.
-  /// Implements headroom management to prevent clipping.
+  /// Sums multiple audio layers into a single interleaved output buffer.
+  /// All layers are pre-allocated to ensure allocation-free execution inside the
+  /// real-time audio callback.
+  /// 
+  /// This class performs pure additive mixing only.
+  /// Gain staging, normalization, and safety limiting are handled by
+  /// higher-level components.
   /// </summary>
   public sealed class Mixer
   {
-    // Pre-allocated layer pool (fixed size, no dynamic growth)
+    /// <summary>
+    /// Fixed attenuation applied after summing all active layers.
+    /// 
+    /// This reserves headroom to prevent clipping when multiple layers,
+    /// envelopes, and modulators are active simultaneously.
+    /// 
+    /// A value of 0.5 corresponds to -6 dB of headroom.
+    /// </summary>
+    private const float MixHeadroom = 0.5f;
+
+    /// <summary>
+    /// Fixed-size pool of audio layers used for rendering.
+    /// The array is allocated once and never resized to guarantee
+    /// deterministic behavior on the audio thread.
+    /// </summary>
     private readonly Layer[] _layers = new Layer[AudioSettings.MaxLayers];
 
-    // Pre-allocated temp buffer for per-layer rendering
+    /// <summary>
+    /// Temporary buffer used for rendering individual layers before
+    /// summing them into the final output buffer.
+    /// This buffer may be resized during initialization but is
+    /// never allocated during steady-state audio processing.
+    /// </summary>
     private float[] _tempBuffer = new float[AudioSettings.MaxBufferSize];
 
-    // Current number of active layers
+    /// <summary>
+    /// Number of currently active layers initialized in the mixer.
+    /// This value is fixed after initialization and
+    /// read frequently by the audio thread.
+    /// </summary>
     private int _activeLayerCount;
 
     /// <summary>
@@ -32,6 +59,10 @@ namespace FreqGen.Core
     /// <param name="sampleRate">System audio sample rate.</param>
     /// <param name="attackSeconds">Envelope attack time for all layers.</param>
     /// <param name="releaseSeconds">Envelope release time for all layers.</param>
+    /// <remarks>
+    /// This method must be called exactly once before the mixer is used.
+    /// It is not thread-safe and must not be called while audio rendering is in progress.
+    /// </remarks>
     /// <exception cref="ArgumentException">Thrown if layerCount exceeds max.</exception>
     public void Initialize(
       int layerCount, float sampleRate,
@@ -55,12 +86,23 @@ namespace FreqGen.Core
     }
 
     /// <summary>
-    /// Generates a mixed audio block from all active layers.
-    /// This is the HOT PATH - must be allocation-free and deterministic.
+    /// Renders and mixes all active audio layers into the provided output buffer.
     /// </summary>
-    /// <param name="outputBuffer">The buffer to fill with the final mixed signal.</param>
+    /// <param name="outputBuffer">
+    /// Destination buffer that will contain the summed audio signal.
+    /// The buffer is always fully written.
+    /// </param>
     /// <param name="sampleRate">System audio sample rate.</param>
-    /// <param name="configs">Read-only snapshot of layer configurations.</param>
+    /// <param name="configs">Read-only snapshot of per-layer configuration data.</param>
+    /// <remarks>
+    /// This method is part of the real-time audio path:
+    /// - No locks
+    /// - No allocations during steady-state operation
+    /// - Deterministic execution time
+    ///
+    /// The mixer performs additive summation only.
+    /// No gain normalization, limiting, or safety clamping is applied here.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Render(
       Span<float> outputBuffer,
@@ -83,26 +125,20 @@ namespace FreqGen.Core
         Span<float> tempSpan = _tempBuffer.AsSpan(0, outputBuffer.Length);
         tempSpan.Clear();
 
-        // Render layer into temp buffer
+        // Render layer into temporary buffer
         _layers[i].UpdateAndProcess(tempSpan, sampleRate, configs[i]);
 
-        // Mix into output buffer
+        // Additively Mix into output buffer
         MixBuffers(outputBuffer, tempSpan);
       }
 
-      // Deterministic headroom scaling
-      float normalizationGain = 0.8f / Math.Max(1, layersToRender);
-
-      for (int i = 0; i < outputBuffer.Length; i++)
-        outputBuffer[i] *= normalizationGain;
-
-      // Safety clamp (should almost never engage)
-      SafetyClamp(outputBuffer);
+      // Apply fixed mix headroom attenuation
+      ApplyHeadroom(outputBuffer);
     }
 
     /// <summary>
-    /// Mixes one buffer into another (additive mixing).
-    /// Inlined for performance.
+    /// Adds the contents of one buffer into another using sample-wise addition.
+    /// Assumes both buffers are the same length.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void MixBuffers(Span<float> destination, ReadOnlySpan<float> source)
@@ -112,13 +148,14 @@ namespace FreqGen.Core
     }
 
     /// <summary>
-    /// 
+    /// Applies fixed post-mix attenuation to reserve headroom
+    /// before device-specific gain and safety limiting.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private static void SafetyClamp(Span<float> buffer)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ApplyHeadroom(Span<float> buffer)
     {
       for (int i = 0; i < buffer.Length; i++)
-        buffer[i] = Math.Clamp(buffer[i], -1.0f, 1.0f);
+        buffer[i] *= MixHeadroom;
     }
 
     /// <summary>
@@ -135,10 +172,10 @@ namespace FreqGen.Core
       return _layers[layerIndex].CurrentEnvelopeValue;
     }
 
-    /// <summary>
-    /// Triggers release phase for all layers.
-    /// Should be called when stopping playback.
-    /// </summary>
+    /// <remarks>
+    /// This method does not stop audio immediately.
+    /// Each layer will fade out according to its configured release time.
+    /// </remarks>
     public void TriggerReleaseAll()
     {
       for (int i = 0; i < _activeLayerCount; i++)
@@ -149,6 +186,11 @@ namespace FreqGen.Core
     /// Resets all layers to prevent clicks on restart.
     /// Should be called when audio engine is fully stopped.
     /// </summary>
+    /// <remarks>
+    /// This method resets internal oscillator and envelope state.
+    /// It should only be called when the audio engine is fully stopped,
+    /// as it may cause discontinuities if used during active playback.
+    /// </remarks>
     public void Reset()
     {
       for (int i = 0; i < _activeLayerCount; i++)

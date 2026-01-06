@@ -1,4 +1,5 @@
 ﻿using FreqGen.Core;
+using FreqGen.Core.Engine;
 using FreqGen.Presets.Models;
 using FreqGen.Presets.Presets;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,11 @@ namespace FreqGen.App.Services
       ?? throw new ArgumentNullException(nameof(logger));
     private AudioEngine? _engine;
     private PresetEngine? _presetEngine;
+    private OutputProfile _outputProfile = OutputProfile.DeviceSpeaker;
     private bool _isInitialized;
     private bool _isDisposed;
+
+    private float _masterGain = 1.0f;
 
     // Error handling
     private const int MaxInitRetries = 3;
@@ -41,6 +45,7 @@ namespace FreqGen.App.Services
 
         // Create core audio engine
         _engine = new(AudioSettings.SampleRate);
+        _engine.SetMasterGain(_masterGain); // Core engine handles smoothing internally
 
         // Subscribe to critical errors
         _engine.CriticalError += OnEngineCriticalError;
@@ -66,13 +71,51 @@ namespace FreqGen.App.Services
         throw new InvalidOperationException("Failed to initialize audio system", ex);
       }
 
-      await Task.CompletedTask;
+      // Apply remembered output profile to platform layer
+      OnOutputProfileChanged(_outputProfile);
+    }
+
+    public async Task<bool> RetryInitializationAsync()
+    {
+      if (_initRetryCount >= MaxInitRetries)
+      {
+        _logger.LogError(
+          "Maximum initialization retries ({MaxRetries}) exceeded",
+          MaxInitRetries
+        );
+        return false;
+      }
+
+      _initRetryCount++;
+      _logger.LogInformation(
+        "Retrying audio initialization (attempt {Attempt}/{MaxAttempts})",
+        _initRetryCount, MaxInitRetries
+      );
+
+      try
+      {
+        // Clean up existing resources
+        await CleanupAsync();
+
+        // Wait before retry
+        await Task.Delay(500);
+
+        // Try initialization again
+        await InitializeAsync();
+
+        return true;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Initialization retry failed");
+        return false;
+      }
     }
 
     public async Task PlayPresetAsync(FrequencyPreset preset)
     {
-      ArgumentNullException.ThrowIfNull(preset);
       ObjectDisposedException.ThrowIf(_isDisposed, this);
+      ArgumentNullException.ThrowIfNull(preset);
 
       if (!_isInitialized)
       {
@@ -118,10 +161,7 @@ namespace FreqGen.App.Services
         {
           await StopAsync();
         }
-        catch
-        {
-          // Ignore errors during cleanup
-        }
+        catch { /* Ignore errors during cleanup */ }
 
         throw new InvalidOperationException($"Failed to play preset: {preset.DisplayName}", ex);
       }
@@ -156,39 +196,44 @@ namespace FreqGen.App.Services
       }
     }
 
-    public async Task<bool> RetryInitializationAsync()
+    public void SetOutputProfile(OutputProfile profile)
     {
-      if (_initRetryCount >= MaxInitRetries)
+      ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+      if (_outputProfile == profile)
+        return;
+
+      _logger.LogInformation("Setting output profile to {Profile}", profile);
+      _outputProfile = profile;
+
+      // Apply immediately if engine exists
+      if (_engine is not null)
       {
-        _logger.LogError("Maximum initialization retries ({MaxRetries}) exceeded", MaxInitRetries);
-        return false;
+        try
+        {
+          float gain = GetOutputGainForProfile(profile);
+          _engine.OutputGain = gain;
+
+          _logger.LogDebug(
+            "Applied output gain {Gain} for profile {Profile}",
+            gain, profile
+          );
+
+          // Allow platform layer to react (routing, session category, etc.)
+          OnOutputProfileChanged(profile);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Failed to apply output profile");
+          throw;
+        }
       }
+    }
 
-      _initRetryCount++;
-      _logger.LogInformation(
-        "Retrying audio initialization (attempt {Attempt}/{MaxAttempts})",
-        _initRetryCount,
-        MaxInitRetries
-      );
-
-      try
-      {
-        // Clean up existing resources
-        await CleanupAsync();
-
-        // Wait before retry
-        await Task.Delay(500);
-
-        // Try initialization again
-        await InitializeAsync();
-
-        return true;
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Initialization retry failed");
-        return false;
-      }
+    public void SetMasterGain(float gain)
+    {
+      _masterGain = gain;
+      _engine?.SetMasterGain(gain);
     }
 
     public async ValueTask DisposeAsync()
@@ -206,6 +251,15 @@ namespace FreqGen.App.Services
 
       DisposePlatformAudio();
     }
+
+    private static float GetOutputGainForProfile(OutputProfile profile) =>
+      profile switch
+      {
+        OutputProfile.Headphones => 0.85f,
+        OutputProfile.ExternalSpeaker => 0.65f,
+        OutputProfile.DeviceSpeaker => 0.45f,
+        _ => 0.6f
+      };
 
     /// <summary>
     /// Cleans up all resources without throwing exceptions.
@@ -273,6 +327,7 @@ namespace FreqGen.App.Services
     partial void InitializePlatformAudio();
     partial void StartPlatformAudio();
     partial void StopPlatformAudio();
+    partial void OnOutputProfileChanged(OutputProfile profile);
     partial void DisposePlatformAudio();
 
     /// <summary>

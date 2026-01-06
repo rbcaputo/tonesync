@@ -38,6 +38,12 @@ namespace FreqGen.App.ViewModels
     private bool _isPlaying;
 
     [ObservableProperty]
+    private float _masterGain = 1.0f;
+
+    [ObservableProperty]
+    private OutputProfile _outputProfile = OutputProfile.DeviceSpeaker;
+
+    [ObservableProperty]
     private FrequencyPreset? _currentPreset;
 
     [ObservableProperty]
@@ -46,6 +52,9 @@ namespace FreqGen.App.ViewModels
 
     [ObservableProperty]
     private string? _errorMessage;
+
+    public IReadOnlyList<OutputProfile> OutputProfiles { get; } =
+      Enum.GetValues<OutputProfile>();
 
     /// <summary>
     /// Grouped presets by category for UI display.
@@ -101,6 +110,8 @@ namespace FreqGen.App.ViewModels
         StatusText = "Initializing audio system...";
 
         await _audioService.InitializeAsync();
+        _audioService.SetMasterGain(MasterGain);
+        _audioService.SetOutputProfile(OutputProfile);
 
         IsInitialized = true;
         StatusText = "✓ Ready - Select a preset to begin";
@@ -119,6 +130,22 @@ namespace FreqGen.App.ViewModels
       {
         IsLoading = false;
       }
+    }
+
+    partial void OnMasterGainChanged(float value)
+    {
+      _logger.LogInformation("Master gain changed to {Gain}", value);
+
+      if (IsInitialized)
+        _audioService.SetMasterGain(value);
+    }
+
+    partial void OnOutputProfileChanged(OutputProfile value)
+    {
+      _logger.LogInformation("Output profile changed to {Profile}", value);
+
+      if (IsInitialized)
+        _audioService.SetOutputProfile(value);
     }
 
     private bool CanPlayPreset() => IsInitialized && !IsLoading && !IsPlaying;
@@ -230,6 +257,8 @@ namespace FreqGen.App.ViewModels
         if (success)
         {
           IsInitialized = true;
+          _audioService.SetMasterGain(MasterGain);
+          _audioService.SetOutputProfile(OutputProfile);
           StatusText = "✓ Initialization successful - Select a preset";
           _logger.LogInformation("Retry successful");
         }

@@ -48,6 +48,18 @@ namespace FreqGen.App.Services
     Task StopAsync();
 
     /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="profile"></param>
+    void SetOutputProfile(OutputProfile profile);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="gain"></param>
+    void SetMasterGain(float gain);
+
+    /// <summary>
     /// Attempts to reinitialize the audio system after a failure.
     /// </summary>
     /// <returns>True if retry succeeded; false otherwise.</returns>

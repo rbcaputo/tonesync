@@ -1,6 +1,7 @@
 ﻿using Android.Media;
 using Android.OS;
 using FreqGen.Core;
+using FreqGen.Core.Engine;
 using Microsoft.Extensions.Logging;
 
 namespace FreqGen.App.Services
@@ -78,13 +79,6 @@ namespace FreqGen.App.Services
           .SetTransferMode(AudioTrackMode.Stream)
           .Build() ??
             throw new InvalidOperationException("Failed to create AudioTrack");
-
-        // Enable low-latency mode on Android 8.0+
-        //if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-        //{
-        //  builder.SetPerformanceMode(AudioTrackPerformanceMode.LowLatency);
-        //  _logger.LogDebug("Low-latency mode enabled");
-        //}
 
         // Allocate buffers once, based on device
         _floatBuffer = new float[_bufferFrames];
@@ -216,7 +210,7 @@ namespace FreqGen.App.Services
           for (int i = 0; i < _bufferFrames; i++)
           {
             // Safety clamp (should already be clamped by engine)
-            float sample = Math.Clamp(floatBuffer[i], -1f, 1f);
+            float sample = Math.Clamp(floatBuffer[i], -0.98f, 0.98f);
 
             // Convert to PCM16
             pcmBuffer[i] = (short)(sample * 32767f);

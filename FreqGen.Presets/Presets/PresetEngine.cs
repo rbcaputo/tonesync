@@ -1,4 +1,6 @@
 ﻿using FreqGen.Core;
+using FreqGen.Core.Engine;
+using FreqGen.Core.Layers;
 using FreqGen.Presets.Models;
 
 namespace FreqGen.Presets.Presets

@@ -30,6 +30,15 @@
                          HeightRequest="50"
                          Margin="0,10" />
 
+      <!-- Initialize Button (explicit, non-magical) -->
+      <Button Text="Initialize Audio"
+              Command="{Binding InitializeAsyncCommand}"
+              IsVisible="{Binding IsInitialized, Converter={StaticResource InvertedBoolConverter}}"
+              HeightRequest="54"
+              CornerRadius="12"
+              FontSize="16"
+              FontAttributes="Bold" />
+
       <!-- Error Display -->
       <Border BackgroundColor="{StaticResource Danger}"
               Padding="20"
@@ -38,6 +47,7 @@
               IsVisible="{Binding HasError}"
               Margin="0,5">
         <VerticalStackLayout Spacing="15">
+
           <HorizontalStackLayout Spacing="10">
             <Label Text="⚠️"
                    FontSize="24"
@@ -74,6 +84,53 @@
                     CornerRadius="10"
                     Padding="20,0" />
           </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+      </Border>
+
+      <!-- Output Profile Selector -->
+      <Border BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray800}}"
+              Padding="15"
+              StrokeThickness="1"
+              Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+              StrokeShape="RoundedRectangle 12"
+              Margin="0,5">
+        <VerticalStackLayout Spacing="8">
+          <Label Text="Output Mode"
+                 FontSize="14"
+                 FontAttributes="Bold"
+                 HorizontalTextAlignment="Center" />
+          <Picker ItemsSource="{Binding OutputProfiles}"
+                  SelectedItem="{Binding OutputProfile, Mode=TwoWay}"
+                  Title="Select output"
+                  FontSize="14"
+                  IsEnabled="{Binding IsPlaying, Converter={StaticResource InvertedBoolConverter}}" />
+        </VerticalStackLayout>
+      </Border>
+
+      <!-- Master Gain -->
+      <Border BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray800}}"
+              Padding="15"
+              StrokeThickness="1"
+              Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+              StrokeShape="RoundRectangle 12"
+              Margin="0,5">
+
+        <VerticalStackLayout Spacing="8">
+          <Label Text="Volume"
+                 FontSize="14"
+                 FontAttributes="Bold"
+                 HorizontalTextAlignment="Center" />
+
+          <Slider Minimum="0"
+                  Maximum="1"
+                  Value="{Binding MasterGain, Mode=TwoWay}"
+                  IsEnabled="{Binding IsInitialized}" />
+
+          <Label Text="{Binding MasterGain, StringFormat='{}{0:P0}'}"
+                 FontSize="12"
+                 HorizontalTextAlignment="Center"
+                 TextColor="{StaticResource Gray500}" />
         </VerticalStackLayout>
       </Border>
 
@@ -95,7 +152,7 @@
 
       <!-- Control Buttons -->
       <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,5">
-        <!-- Stop Button -->
+
         <Button Grid.Column="0"
                 Text="⏹ Stop"
                 Command="{Binding StopCommand}"
@@ -107,7 +164,6 @@
                 FontAttributes="Bold"
                 IsEnabled="{Binding IsPlaying}" />
 
-        <!-- Preset Info (when playing) -->
         <Border Grid.Column="1"
                 BackgroundColor="{StaticResource Success}"
                 Padding="10"
@@ -128,6 +184,7 @@
                    MaxLines="1" />
           </VerticalStackLayout>
         </Border>
+
       </Grid>
 
       <!-- Preset Categories -->
@@ -139,22 +196,18 @@
                         SelectionMode="None">
           <CollectionView.ItemTemplate>
             <DataTemplate x:DataType="vm:PresetGroup">
+
               <VerticalStackLayout Spacing="12" Margin="0,0,0,30">
 
-                <!-- Category Header -->
                 <VerticalStackLayout Spacing="3">
                   <Label Text="{Binding Name}"
                          FontSize="22"
-                         FontAttributes="Bold"
-                         Margin="0,0,0,2" />
+                         FontAttributes="Bold" />
                   <Label Text="{Binding Description}"
                          FontSize="13"
-                         TextColor="{StaticResource Gray500}"
-                         LineBreakMode="WordWrap"
-                         Margin="0,0,0,8" />
+                         TextColor="{StaticResource Gray500}" />
                 </VerticalStackLayout>
 
-                <!-- Presets in Category -->
                 <VerticalStackLayout Spacing="8"
                                     BindableLayout.ItemsSource="{Binding .}">
                   <BindableLayout.ItemTemplate>
@@ -162,18 +215,14 @@
                       <Border BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray800}}"
                               StrokeThickness="1"
                               Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
-                              StrokeShape="RoundRectangle 12"
-                              Padding="0">
+                              StrokeShape="RoundRectangle 12">
                         <Button Text="{Binding DisplayName}"
                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=PlayPresetCommand}"
                                 CommandParameter="{Binding .}"
                                 BackgroundColor="Transparent"
-                                TextColor="{AppThemeBinding Light={StaticResource Black}, Dark={StaticResource White}}"
                                 HeightRequest="56"
-                                CornerRadius="12"
                                 FontSize="15"
                                 FontAttributes="Bold"
-                                HorizontalOptions="Fill"
                                 Padding="20,0" />
                       </Border>
                     </DataTemplate>
@@ -181,22 +230,21 @@
                 </VerticalStackLayout>
 
               </VerticalStackLayout>
+
             </DataTemplate>
           </CollectionView.ItemTemplate>
         </CollectionView>
 
       </VerticalStackLayout>
 
-      <!-- Footer Info -->
+      <!-- Footer -->
       <VerticalStackLayout Spacing="5" Margin="0,20,0,30" HorizontalOptions="Center">
         <Label Text="FreqGen v1.0"
                FontSize="12"
-               TextColor="{StaticResource Gray400}"
-               HorizontalOptions="Center" />
+               TextColor="{StaticResource Gray400}" />
         <Label Text="Use headphones for best experience"
                FontSize="11"
-               TextColor="{StaticResource Gray400}"
-               HorizontalOptions="Center" />
+               TextColor="{StaticResource Gray400}" />
       </VerticalStackLayout>
 
     </VerticalStackLayout>

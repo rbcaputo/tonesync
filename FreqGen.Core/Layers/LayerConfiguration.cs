@@ -1,6 +1,6 @@
 ﻿using FreqGen.Core.Exceptions;
 
-namespace FreqGen.Core
+namespace FreqGen.Core.Layers
 {
   /// <summary>
   /// Immutable, validated configuration data for a single audio layer.

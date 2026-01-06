@@ -1,7 +1,8 @@
 ﻿using FreqGen.Core.Exceptions;
+using FreqGen.Core.Layers;
 using System.Runtime.CompilerServices;
 
-namespace FreqGen.Core
+namespace FreqGen.Core.Engine
 {
   /// <summary>
   /// The primary entry point for the FreqGen DSP engine.
@@ -17,13 +18,33 @@ namespace FreqGen.Core
     // Lock-free configuration snapshot (accessed by audio thread)
     private LayerConfiguration[] _configSnapshot = [];
 
-    // Volatile flag for configuration updates (lock-free synchronization)
+    /// <summary>
+    /// Indicates that a new configuration snapshot has been published.
+    /// This flag is written by the UI thread and consumed by the audio thread without
+    /// locks to ensure real-time safety.
+    /// </summary>
     private volatile bool _configDirty;
+
+    private float _outputGain = 1.0f;
 
     // State flags
     private bool _isInitialized;
     private bool _isPlaying;
     private bool _isDisposed;
+
+    /// <summary>
+    /// Target master gain applied to the final output stage.
+    /// This value may change abruptly (e.g., when switching output profiles),
+    /// but is always smoothed before being applied to audio samples.
+    /// </summary>
+    private volatile float _masterGain = 1.0f;
+
+    /// <summary>
+    /// Smoothed version of <see cref="_masterGain"/> used to prevent clicks and
+    /// discontinuities when gain changes occur during playback.
+    /// This value is updated incrementally inside the audio callback.
+    /// </summary>
+    private float _smoothedGain = 1.0f;
 
     // Error tracking for graceful degradation
     private int _consecutiveErrorCount;
@@ -42,6 +63,16 @@ namespace FreqGen.Core
     /// Gets a value indicating whether the engine has been initialized.
     /// </summary>
     public bool IsInitialized => _isInitialized;
+
+    /// <summary>
+    /// Linear output gain applied as the final stage before delivery to the platform.
+    /// This must remain ≤ 1.0 to avoid speaker overload.
+    /// </summary>
+    public float OutputGain
+    {
+      get => _outputGain;
+      set => _outputGain = Math.Clamp(value, 0f, 1f);
+    }
 
     /// <summary>
     /// Gets a value indicating whether the engine is currently generating audio.
@@ -148,6 +179,14 @@ namespace FreqGen.Core
     }
 
     /// <summary>
+    /// Sets the target master gain for the engine.
+    /// Must be between 0.0 and 1.0. Applied smoothly in the audio callback.
+    /// </summary>
+    /// <param name="gain">Linear gain value (0.0 to 1.0).</param>
+    public void SetMasterGain(float gain) =>
+      _masterGain = Math.Clamp(gain, 0f, 1f);
+
+    /// <summary>
     /// Begins audio generation by triggering envelopes.
     /// Engine must be initialized first.
     /// </summary>
@@ -190,6 +229,8 @@ namespace FreqGen.Core
     /// - No locks allowed
     /// - No I/O operations allowed
     /// - No logging/diagnostics allowed
+    /// The final output stage always applies master gain smoothing and a
+    /// hard safety limiter, even if rendering succeeds.
     /// Errors are stored and reported asynchronously via events or polling.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
@@ -197,13 +238,7 @@ namespace FreqGen.Core
     {
       ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-      if (!_isInitialized)
-      {
-        buffer.Clear();
-        return;
-      }
-
-      if (!_isPlaying)
+      if (!_isInitialized || !_isPlaying)
       {
         buffer.Clear();
         return;
@@ -244,6 +279,21 @@ namespace FreqGen.Core
           ThreadPool.QueueUserWorkItem(_ => RaiseCriticalErrorAsync(ex));
         }
       }
+
+      // Smooth master gain to avoid clicks
+      const float gainSlew = 0.001f; // ~100ms response at 48kHz
+
+      for (int i = 0; i < buffer.Length; i++)
+      {
+        _smoothedGain += (_masterGain - _smoothedGain) * gainSlew;
+
+        float sample = buffer[i] * _smoothedGain;
+
+        // Absolute safety ceiling (never remove)
+        buffer[i] = Math.Clamp(sample, -0.999f, 0.999f);
+
+        buffer[i] *= _outputGain;
+      }
     }
 
     /// <summary>
@@ -278,9 +328,14 @@ namespace FreqGen.Core
     }
 
     /// <summary>
-    /// Immediately silences the engine and resets all internal states.
-    /// Use this for emergency stop, not normal playback stop.
+    /// Immediately silences the engine and resets all internal DSP state.
+    /// This bypasses envelope release and should only be used for
+    /// emergency stop or fault recovery, not normal playback control.
     /// </summary>
+    /// <remarks>
+    /// This method is safe to call from the UI thread.
+    /// It does not dispose the engine or release platform resources.
+    /// </remarks>
     public void Reset()
     {
       ObjectDisposedException.ThrowIf(_isDisposed, this);

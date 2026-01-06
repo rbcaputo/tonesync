@@ -1,37 +1,55 @@
-﻿namespace FreqGen.Core.Nodes.Modulators
+﻿using System.Runtime.CompilerServices;
+
+namespace FreqGen.Core.Nodes.Modulators
 {
   /// <summary>
-  /// Static processor for applying Amplitude Modulation (AM).
-  /// Implements the formula: Carrier * (1 + Depth * Modulator).
+  /// Applies headroom-safe amplitude modulation (AM) to an audio buffer.
+  /// 
+  /// This implementation guarantees that modulation never increases the
+  /// signal above unity gain, preventing clipping and intermodulation artifacts when
+  /// multiple layers are summed.
   /// </summary>
-  public sealed class AMModulator
+  public static class AMModulator
   {
     /// <summary>
-    /// Gets or sets the intensity of the modulation effect (0.0 to 1.0).
+    /// Applies amplitude modulation to the carrier buffer using a modulator buffer.
+    /// The modulation is scaled to preserve headroom and avoid gain overshoot.
     /// </summary>
-    public float Depth { get; set; } = 0.5f;
-
-    /// <summary>
-    /// Applies amplitude modulation to an existing audio buffer.
-    /// </summary>
-    /// <param name="audioBuffer">The buffer containing carrier signal (modified in place).</param>
-    /// <param name="modulationBuffer">The buffer containing the LFO/Modulator signal.</param>
-    /// <param name="depth">The intensity of modulation (0.0 to 1.0).</param>
+    /// <param name="carrier">
+    /// The audio buffer containing the carrier signal. Modified in place.
+    /// Expected range: [-1, 1].
+    /// </param>
+    /// <param name="modulator">
+    /// The modulation buffer (typically an LFO).
+    /// Expected range: [-1, 1].
+    /// </param>
+    /// <param name="depth">
+    /// Modulation depth in the range [0, 1].
+    /// A value of 1 produces full-depth AM without exceeding unity gain.
+    /// </param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Apply(
-      Span<float> audioBuffer,
-      ReadOnlySpan<float> modulationBuffer,
+      Span<float> carrier,
+      ReadOnlySpan<float> modulator,
       float depth
     )
     {
-      float effectiveDepth = Math.Clamp(depth, 0f, 1f);
-
-      if (effectiveDepth <= 0f)
+      if (depth <= 0)
         return;
 
-      for (int i = 0; i < audioBuffer.Length; i++)
+      // Clamp depth defensively (hot path safe)
+      if (depth > 1f)
+        depth = 1f;
+
+      for (int i = 0; i < carrier.Length; i++)
       {
-        float modulation = modulationBuffer[i]; // [-1, 1]
-        audioBuffer[i] *= 1.0f + effectiveDepth * modulation;
+        float modulation = modulator[i]; // [-1, 1]
+
+        // Headroom safe AM
+        // Maps modulation into [1 - depth, 1]
+        float amplitude = 1f - depth + (depth * 0.5f * (modulation + 1f));
+
+        carrier[i] *= amplitude;
       }
     }
   }
