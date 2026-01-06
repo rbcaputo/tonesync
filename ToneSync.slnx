@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ToneSync.App/ToneSync.App.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="ToneSync.Core/ToneSync.Core.csproj" />
+  <Project Path="ToneSync.Presets/ToneSync.Presets.csproj" />
+</Solution>

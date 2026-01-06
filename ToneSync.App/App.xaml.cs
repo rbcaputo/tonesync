@@ -1,0 +1,15 @@
+﻿using FreqGen.App;
+
+namespace ToneSync.App
+{
+  public sealed partial class App : Application
+  {
+    public App()
+    {
+      InitializeComponent();
+    }
+
+    protected override Window CreateWindow(IActivationState? activationState) =>
+      new(new AppShell());
+  }
+}
