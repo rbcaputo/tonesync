@@ -8,7 +8,7 @@ It is designed as a **general-purpose tone, frequency, and modulation engine**, 
 * Generative audio systems
 * Prototyping DSP pipelines for mobile and desktop
 
-> The *therapeutic/frequecy-based* use case is **not a claim**, product promise, or built-in assumption.\
+> The *therapeutic/frequency-based* use case is **not a claim**, product promise, or built-in assumption.\
 > It is presented purely as **one possible application** of the DSP capabilities.
 
 ToneSync prioritizes **clarity, correctness, and architectural honesty** over marketing abstractions.
@@ -16,7 +16,7 @@ ToneSync prioritizes **clarity, correctness, and architectural honesty** over ma
 ---
 
 ## Core Principles
-ToneSync is build around a few non-negotiable ideas:
+ToneSync is built around a few non-negotiable ideas:
 * **DSP first** – The signal chain is explicit and inspectable
 * **No magical behavior** – Initialization, playback, and state transitions are user-controlled
 * **Separation of concerns** – Core DSP, application logic, and UI are cleanly isolated
@@ -74,12 +74,12 @@ var config = new LayerConfiguration
   CarrierFrequency = 440.0f,  // A4 note
   ModulatorFrequency = 10.0f, // 10Hz alpha wave
   ModulatorDepth = 0.6f,      // 60% modulation depth
-  Weight = 1.0f               // Full volume
+  Weight = 1.0f,              // Full volume
   IsActive = true
 };
 
 // Initialize engine with configuration
-engine.Initialize([config], attackSeconds: 10f, releaseSeconds: 30f)
+engine.Initialize([config], attackSeconds: 10f, releaseSeconds: 30f);
 
 // Start playback
 engine.Start();
@@ -193,15 +193,22 @@ If you are curious about sounds, signals, and structure – you are in the right
 
 ## Documentation
 For detailed technical documentation:
-* [REFERENCE.md](link) – Complete DSP theory, mathematical foundations, and implementation details.
+* [DSP_REFERENCE.md](Docs/DSP_REFERENCE.md) – Complete DSP theory, mathematical foundations, and implementation details.
+* [PRESET_REFERENCE.md](Docs/PRESET_REFERENCE.md) – Frequency applications and cultural context
 
-The reference documentation covers:
+The DSP reference covers:
 * Signal processing mathematics and formulas
 * Oscillator, envelope, and modulation theory
-* Mobile audio constraits and optimizations strategies
+* Mobile audio constraints and optimization strategies
 * DSP graph architecture and real-time safety principles
 
-Contributors working on Core DSP should read the reference documentation first.
+The Preset reference covers:
+* Brainwave, Solfeggio, and isochronic frequency interpretations
+* Cultural and historical context for "healing frequencies"
+* Design principles for creating effective presets
+* Beginner-friendly preset guidelines
+
+**Contributors working on Core DSP should read the reference documentation first.**
 
 ---
 
