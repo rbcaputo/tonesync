@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using ToneSync.Core;
 using ToneSync.Core.Nodes;
 using ToneSync.Core.Nodes.Modulators;
 using ToneSync.Core.Nodes.Oscillators;
@@ -50,6 +49,8 @@ namespace ToneSync.Core.Layers
     /// </summary>
     private float[] _modulatorBuffer = new float[AudioSettings.MaxBufferSize];
 
+    private bool _isInitialized;
+
     /// <summary>
     /// Gets the current envelope value for this layer.
     /// Useful for UI feedback or metering.
@@ -75,7 +76,11 @@ namespace ToneSync.Core.Layers
       float sampleRate,
       float attackSeconds,
       float releaseSeconds
-    ) => _envelope.Configure(attackSeconds, releaseSeconds, sampleRate);
+    )
+    {
+      _envelope.Configure(attackSeconds, releaseSeconds, sampleRate);
+      _isInitialized = true;
+    }
 
     /// <summary>
     /// Updates internal DSP state and renders this layer into the
@@ -98,10 +103,14 @@ namespace ToneSync.Core.Layers
     /// If the layer is inactive, the buffer is cleared and no DSP work is performed.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public void UpdateAndProcess(Span<float> buffer, float sampleRate, LayerConfiguration config)
+    public void UpdateAndProcess(
+      Span<float> buffer,
+      float sampleRate,
+      LayerConfiguration config
+    )
     {
-      // Early exit if layer is inactive (saves CPU)
-      if (!config.IsActive)
+      // Early exit (saves CPU)
+      if (!_isInitialized || config is null || !config.IsActive)
       {
         buffer.Clear();
         return;

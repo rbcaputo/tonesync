@@ -1,7 +1,7 @@
 ﻿using ToneSync.Core;
 using ToneSync.Core.Nodes.Modulators;
 
-namespace ToneSync.Tests.Core.Nodes
+namespace ToneSync.Tests.Core.Nodes.Modulators
 {
   public sealed class LFOTests
   {

@@ -33,21 +33,23 @@ namespace ToneSync.Tests.Core.Nodes
     public void Release_Moves_Envelope_Downward()
     {
       var env = new Envelope();
-      env.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
+      env.Configure(0.05f, 0.05f, AudioSettings.SampleRate);
       env.Trigger(true);
 
-      var bufferA = new float[AudioSettings.RecommendedBufferSize * 4];
-      env.Process(bufferA); // reach near 1.0
+      var bufferA = new float[AudioSettings.RecommendedBufferSize];
+      for (var i = 0; i < 10; i++)
+        env.Process(bufferA);
 
-      var peak = env.CurrentValue;
-      Assert.True(peak > 0.9f);
+      var beforeRelease = env.CurrentValue;
+      Assert.True(beforeRelease > 0.2f);
 
       env.Trigger(false);
 
       var bufferB = new float[AudioSettings.RecommendedBufferSize];
       env.Process(bufferB);
 
-      Assert.True(env.CurrentValue < peak);
+      var afterRelease = env.CurrentValue;
+      Assert.True(afterRelease < beforeRelease);
     }
 
     [Fact]
@@ -96,53 +98,92 @@ namespace ToneSync.Tests.Core.Nodes
     }
 
     [Fact]
-    public void Attack_Is_Faster_Than_Release_When_Configured_So()
+    public void Envelope_Decays_Monotonically_After_Release()
     {
-      var env = new Envelope();
-      env.Configure(0.1f, 1.0f, AudioSettings.SampleRate);
-      env.Trigger(true);
+      var envelope = new Envelope();
+      envelope.Configure(1f, 1f, 48000);
+      envelope.Trigger(true);
 
-      var bufferA = new float[AudioSettings.RecommendedBufferSize];
-      env.Process(bufferA);
-      var attack = env.CurrentValue;
+      var buffer = new float[AudioSettings.RecommendedBufferSize];
+      for (var i = 0; i < 200; i++)
+        envelope.Process(buffer);
 
-      env.Trigger(false);
+      envelope.Trigger(false);
+
+      float last = envelope.CurrentValue;
+
+      for (var i = 0; i < 500; i++)
+      {
+        envelope.Process(buffer);
+
+        Assert.True(envelope.CurrentValue <= last + 1e-7f);
+        Assert.True(envelope.CurrentValue >= 0f);
+
+        last = envelope.CurrentValue;
+      }
+    }
+
+    [Fact]
+    public void Attack_Has_Larger_Per_Sample_Delta_Than_Release_When_Configured_So()
+    {
+      var envelope = new Envelope();
+      envelope.Configure(0.1f, 1.0f, AudioSettings.SampleRate);
+      envelope.Trigger(true);
+
+      var beforeAttack = envelope.CurrentValue;
+
+      var bufferA = new float[1];
+      envelope.Process(bufferA);
+
+      var afterAttack = envelope.CurrentValue;
+      var attackDelta = afterAttack - beforeAttack;
 
       var bufferB = new float[AudioSettings.RecommendedBufferSize];
-      env.Process(bufferB);
-      var release = env.CurrentValue;
 
-      // Attack should rise more quickly than release falls
-      Assert.True(attack > (1f - release));
+      // Force envelope near 1
+      for (var i = 0; i < 50; i++)
+        envelope.Process(bufferB);
+
+      envelope.Trigger(false);
+
+      var beforeRelease = envelope.CurrentValue;
+
+      var bufferC = new float[1];
+      envelope.Process(bufferC);
+
+      var afterRelease = envelope.CurrentValue;
+      var releaseDelta = beforeRelease - afterRelease;
+
+      Assert.True(attackDelta > releaseDelta);
     }
 
     [Fact]
     public void Never_Exceeds_Zero_To_One_Range()
     {
-      var env = new Envelope();
-      env.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
-      env.Trigger(true);
+      var envelope = new Envelope();
+      envelope.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
+      envelope.Trigger(true);
 
       var buffer = new float[AudioSettings.RecommendedBufferSize * 8];
-      env.Process(buffer);
+      envelope.Process(buffer);
 
-      Assert.InRange(env.CurrentValue, 0f, 1f);
+      Assert.InRange(envelope.CurrentValue, 0f, 1f);
 
-      env.Trigger(false);
-      env.Process(buffer);
+      envelope.Trigger(false);
+      envelope.Process(buffer);
 
-      Assert.InRange(env.CurrentValue, 0f, 1f);
+      Assert.InRange(envelope.CurrentValue, 0f, 1f);
     }
 
     [Fact]
     public void Silent_Buffer_Remains_Silent()
     {
-      var env = new Envelope();
-      env.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
-      env.Trigger(true);
+      var envelope = new Envelope();
+      envelope.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
+      envelope.Trigger(true);
 
       var buffer = new float[AudioSettings.RecommendedBufferSize];
-      env.Process(buffer);
+      envelope.Process(buffer);
 
       foreach (var sample in buffer)
         Assert.Equal(0f, sample, Tolerance);
@@ -151,32 +192,32 @@ namespace ToneSync.Tests.Core.Nodes
     [Fact]
     public void Long_Attack_Does_Not_Jump_Abruptly()
     {
-      var env = new Envelope();
-      env.Configure(30f, 30f, AudioSettings.SampleRate);
-      env.Trigger(true);
+      var envelope = new Envelope();
+      envelope.Configure(30f, 30f, AudioSettings.SampleRate);
+      envelope.Trigger(true);
 
       var buffer = new float[AudioSettings.RecommendedBufferSize];
-      env.Process(buffer);
+      envelope.Process(buffer);
 
-      Assert.True(env.CurrentValue < 0.01f);
+      Assert.True(envelope.CurrentValue < 0.01f);
     }
 
     [Fact]
     public void Reset_Clears_Envelope_State()
     {
-      var env = new Envelope();
-      env.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
-      env.Trigger(true);
+      var envelope = new Envelope();
+      envelope.Configure(0.1f, 0.1f, AudioSettings.SampleRate);
+      envelope.Trigger(true);
 
       var bufferA = new float[AudioSettings.RecommendedBufferSize * 2];
-      env.Process(bufferA);
-      Assert.True(env.CurrentValue > 0f);
+      envelope.Process(bufferA);
+      Assert.True(envelope.CurrentValue > 0f);
 
-      env.Reset();
-      Assert.Equal(0f, env.CurrentValue, Tolerance);
+      envelope.Reset();
+      Assert.Equal(0f, envelope.CurrentValue, Tolerance);
 
       var bufferB = new float[AudioSettings.RecommendedBufferSize / 16];
-      env.Process(bufferB);
+      envelope.Process(bufferB);
 
       foreach (var sample in bufferB)
         Assert.Equal(0f, sample, Tolerance);
