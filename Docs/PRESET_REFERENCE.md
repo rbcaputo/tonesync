@@ -228,7 +228,7 @@ The only **cognitively meaningful** parameters are:
  ## 9. Further Reading
  For the pure mathematical implementation of these concepts, see:
  * [DSP_REFERENCE.md](DSP_REFERENCE.md) – Signal processing foundations
- * [README.md](tonesync/README.md) – Architecture and philosophy
+ * [README.md](README.md) – Architecture and philosophy
 
 For scientific research on auditory entrainment:
 * Search academic databases for "auditory driving", "brainwave entrainment", "binaural beats"
