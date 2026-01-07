@@ -214,6 +214,7 @@ Frequencies below 80Hz that work through **mechanical sensation** more than hear
 ## 8. Core Engineering Insight
 **Strip away the labels, and every system reduces to:**
 > A stable carrier + slow time-domain modulation + gentle transitions
+
 The "healing" part is **never** the carrier frequency.\
 The only **cognitively meaningful** parameters are:
 1. **Modulation rate** (the rhythm of change)
