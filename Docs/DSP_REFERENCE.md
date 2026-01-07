@@ -13,11 +13,11 @@ Where:
 * `E(t)` = macro envelope (minutes-scale amplitude shaping)
 * `C_i(t)` = carrier signal(s) – audible waveform
 * `M_i(t)` = modulation signal(s) – amplitude variation
-* `w_i` = layer wights – mixing coefficients
+* `w_i` = layer weights – mixing coefficients
 * `N` = number of layers
 
 This abstraction subsumes:
-* Amplitudee modulated tones
+* Amplitude modulated tones
 * Pure sine/harmonic drones
 * Layered audio textures
 * Noise beds
@@ -25,14 +25,14 @@ This abstraction subsumes:
 ---
 
 ## 2. Carrier Model
-A carries is any audible waveform in the 20-2000Hz range.
+A carrier is any audible waveform in the 20-2000Hz range.
 
 ### 2.1 Pure Sine Carrier
 ```mathematics
 C(t) = sin(2πf_c t + ϕ)
 ```
 Where:
-* `f_c` = carrie frequency (typically 100-800Hz)
+* `f_c` = carrier frequency (typically 100-800Hz)
 * `ϕ` = initial phase (usually 0)
 
 ### 2.2 Harmonic Carrier
@@ -76,7 +76,7 @@ This prevents harsh click artifacts while maintaining rhythmic character.
 ## 4. Envelope Model (Critical for long sessions)
 No audio system omits this. Envelopes prevent startle responses and clicks.
 
-### 4.1 Exponential Fande-In/Fade-Out
+### 4.1 Exponential Fade-In/Fade-Out
 ```mathematics
        ⎧ 1 - e^(-t/τ_a)      t< T_on
 E(t) = ⎨ 1                   T_on ≤ t ≤ T_off
@@ -137,7 +137,7 @@ Unless deliberately ramped with smoothing.1
 ---
 
 ## 7. Minimal Parameter Set
-Strip everythign down to essentials:
+Strip everything down to essentials:
 * Carrier frequency `f_c`
 * Modulation frequency `f_m`
 * Modulation depth `α`
@@ -217,7 +217,7 @@ Same oscillator structure as carriers, but:
 
 **Common waveforms:**
 * Sine (default – smoothest)
-* Triangle (slightly moere "organic")
+* Triangle (slightly more "organic")
 * Smoothed square (isochronic-style)
 
 **Example output:**
@@ -307,7 +307,7 @@ Y_noise[n] = E[n] · noise()
 
 ---
 
-### 9. Mixed Node
+### 9. Mixer Node
 Summation with normalization:
 ```mathematics
 Y_mix[n] = ∑(i=1 to N) w_i Y_i[n]
@@ -344,7 +344,7 @@ f_beat = |f_R - f_L|
 **Important design boundary:**
 * **Oscillators, mixers** → audio-rate (48kHz)
 * **LFOs, envelopes** → can be control-rate (e.g. 100Hz or decimated)
-* **Paramater smoothing** → control-rate
+* **Parameter smoothing** → control-rate
 
 This saves CPU and improves stability on mobile devices.
 
@@ -428,7 +428,7 @@ This is the **only** place where samples are generated.
 ```csharp
 carrierFrequency += (targetFrequency - carrierFrequency) * 0.001f;
 ```
-No locks. No atomics is we can avoid them. Smoothing absorbs jitter.
+No locks. No atomics if we can avoid them. Smoothing absorbs jitter.
 
 ---
 
@@ -442,7 +442,7 @@ Mobile devices punish:
 * Lookup tables for sine
 * Control-rate LFOs (update every 16-64 samples)
 * Few layers (2-4 maximum)
-* Avois stereo unless needed (doubles CPU)
+* Avoid stereo unless needed (doubles CPU)
 
 This engine can run **for hours** without draining a phone if done right.
 
@@ -466,7 +466,7 @@ catch (Exception ex)
  _lastError = ex; // Volatile write
  buffer.Clear();   // Silence
 
- Report asynchronously
+ // Report asynchronously
  ThreadPool.QueueUserWorkItem(_ => LogError(ex));
 }
 ```
@@ -477,7 +477,7 @@ catch (Exception ex)
 A system with:
 * Deterministic DSP graph
 * Mobile-safe execution model
-* Clean separation between sound design an UI
+* Clean separation between sound design and UI
 * Capability to express any AM/FM/layered signal
 * No allocations in hot path
 * No domain assumptions in Core layer
