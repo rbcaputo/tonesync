@@ -3,7 +3,7 @@ using ToneSync.Core.Engine;
 using ToneSync.Core.Exceptions;
 using ToneSync.Core.Layers;
 
-namespace ToneSync.Tests.Core.Engine
+namespace ToneSync.Core.Tests.Engine
 {
   public sealed class AudioEngineTests
   {

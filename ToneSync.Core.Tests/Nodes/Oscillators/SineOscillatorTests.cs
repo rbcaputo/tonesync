@@ -1,7 +1,7 @@
 ﻿using ToneSync.Core;
 using ToneSync.Core.Nodes.Oscillators;
 
-namespace ToneSync.Tests.Core.Nodes.Oscillators
+namespace ToneSync.Core.Tests.Nodes.Oscillators
 {
   public sealed class SineOscillatorTests
   {

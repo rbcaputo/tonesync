@@ -1,7 +1,7 @@
 ﻿using ToneSync.Core;
 using ToneSync.Core.Nodes;
 
-namespace ToneSync.Tests.Core.Nodes
+namespace ToneSync.Core.Tests.Nodes
 {
   public sealed class EnvelopeTests
   {

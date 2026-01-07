@@ -1,7 +1,7 @@
 ﻿using ToneSync.Core;
 using ToneSync.Core.Layers;
 
-namespace ToneSync.Tests.Core.Layers
+namespace ToneSync.Core.Tests.Layers
 {
   public sealed class LayerTests
   {

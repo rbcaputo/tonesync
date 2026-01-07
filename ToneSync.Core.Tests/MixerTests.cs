@@ -1,7 +1,7 @@
 ﻿using ToneSync.Core;
 using ToneSync.Core.Layers;
 
-namespace ToneSync.Tests.Core
+namespace ToneSync.Core.Tests
 {
   public sealed class MixerTests
   {

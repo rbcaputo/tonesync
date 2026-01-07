@@ -1,6 +1,6 @@
 ﻿using ToneSync.Core.Nodes.Modulators;
 
-namespace ToneSync.Tests.Core.Nodes.Modulators
+namespace ToneSync.Core.Tests.Nodes.Modulators
 {
   public sealed class AMModulatorTests
   {
