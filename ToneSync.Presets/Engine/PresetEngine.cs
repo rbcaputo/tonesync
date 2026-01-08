@@ -9,6 +9,7 @@ namespace ToneSync.Presets.Engine
   /// <summary>
   /// Manages the selection, loading, and state tracking of frequency presets.
   /// Acts as the primary interface between the UI and the AudioEngine.
+  /// Supports both mono and stereo (binaural) output modes.
   /// Thread-safe for UI updates.
   /// </summary>
   /// <remarks>
@@ -45,7 +46,8 @@ namespace ToneSync.Presets.Engine
     public static IEnumerable<FrequencyPreset> GetAllPresets() =>
       BrainwavePresets.All
         .Concat(SolfeggioPresets.All)
-        .Concat(IsochronicPresets.All);
+        .Concat(IsochronicPresets.All)
+        .Concat(BinauralPresets.All);
 
     /// <summary>
     /// Returns presets filtered by category.
@@ -62,14 +64,17 @@ namespace ToneSync.Presets.Engine
     /// <summary>
     /// Loads a preset and initializes the audio engine.
     /// Validates preset before loading and converts to core configurations.
+    /// Automatically determines channel mode from preset configuration.
     /// </summary>
     /// <param name="preset">The preset to load.</param>
+    /// <param name="forceChannelMode"></param>
     /// <param name="attackSeconds">Override default attack time (optional).</param>
     /// <param name="releaseSeconds">Override default release time (optional).</param>
     /// <exception cref="ArgumentNullException">Thrown if preset is null.</exception>
     /// <exception cref="Exceptions.PresetValidationException">Thrown if preset validation fails.</exception>
     public void LoadPreset(
       FrequencyPreset preset,
+      ChannelMode? forceChannelMode = null,
       float? attackSeconds = null,
       float? releaseSeconds = null
     )
@@ -79,13 +84,19 @@ namespace ToneSync.Presets.Engine
       // Validate preset structure
       preset.Validate();
 
+      // Determine channel mode
+      ChannelMode channelMode = forceChannelMode ?? DetermineChannelMode(preset);
+
       // Convert preset layers to core configurations
       List<LayerConfiguration> coreConfigs = new(preset.Layers.Count);
 
       foreach (LayerConfig layer in preset.Layers)
       {
         // Convert and validate each layer
-        LayerConfiguration coreConfig = layer.ToCoreConfig(isActive: false); // Start inactive
+        LayerConfiguration coreConfig = layer.ToCoreConfig(
+          isActive: false,
+          channelMode: channelMode
+        ); // Start inactive
         coreConfig.ValidateForSampleRate(_audioEngine.SampleRate);
         coreConfigs.Add(coreConfig);
       }
@@ -96,6 +107,7 @@ namespace ToneSync.Presets.Engine
       // Initialize audio engine with new configuration
       _audioEngine.Initialize(
         _currentCoreConfigs.AsReadOnly(),
+        channelMode,
         attackSeconds ?? AudioSettings.EnvelopeSettings.DefaultAttackSeconds,
         releaseSeconds ?? AudioSettings.EnvelopeSettings.DefaultReleaseSeconds
       );
@@ -111,7 +123,9 @@ namespace ToneSync.Presets.Engine
     public void StartPlayback()
     {
       if (_activePreset is null)
-        throw new InvalidOperationException("No preset loaded. Call LoadPreset() first.");
+        throw new InvalidOperationException(
+          "No preset loaded. Call LoadPreset() first."
+        );
 
       // Activate all layers
       UpdateLayerStates(isActive: true);
@@ -143,6 +157,8 @@ namespace ToneSync.Presets.Engine
     {
       if (_activePreset is null)
         return;
+
+      ChannelMode currentMode = _audioEngine.ChannelMode;
 
       // Rebuild configurations with new active state
       List<LayerConfiguration> updatedConfigs = new(_activePreset.Layers.Count);
@@ -182,6 +198,24 @@ namespace ToneSync.Presets.Engine
         return 0.0f;
 
       return _audioEngine.GetLayerEnvelopeValue(layerIndex);
+    }
+
+    /// <summary>
+    /// Determines the appropriate channel mode for a preset.
+    /// If any layer has stereo configuration, use stereo mode.
+    /// </summary>
+    private static ChannelMode DetermineChannelMode(FrequencyPreset preset)
+    {
+      // Check if preset is explicitly binaural
+      if (preset.Category == PresetCategory.Binaural)
+        return ChannelMode.Stereo;
+
+      // Check if any layers has stereo frequency offset
+      bool hasStereoLayers = preset.Layers.Any(layer =>
+        Math.Abs(layer.StereoFrequencyOffset) > 0.001f
+      );
+
+      return hasStereoLayers ? ChannelMode.Stereo : ChannelMode.Mono;
     }
   }
 }

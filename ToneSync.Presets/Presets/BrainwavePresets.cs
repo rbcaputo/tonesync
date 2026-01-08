@@ -25,8 +25,20 @@ namespace ToneSync.Presets.Presets
       Tags = ["sleep", "recovery", "deep", "restorative"],
       Layers =
         [
-          LayerConfig.AmTone(174f, 2.0f, 0.6f, 0.7f, "Primary Delta carrier"),
-          LayerConfig.AmTone(176f, 2.0f, 0.3f, 0.3f, "Supporting harmonic")
+          LayerConfig.AmTone(
+            carrierHz: 174f,
+            modulationHz: 2.0f,
+            depth: 0.6f,
+            weight: 0.7f,
+            description: "Primary Delta carrier"
+          ),
+          LayerConfig.AmTone(
+            carrierHz: 176f,
+            modulationHz: 2.0f,
+            depth: 0.3f,
+            weight: 0.3f,
+            description: "Supporting harmonic"
+          )
         ]
     };
 
@@ -46,8 +58,20 @@ namespace ToneSync.Presets.Presets
       Tags = ["meditation", "creative", "visualization", "intuitive"],
       Layers =
         [
-          LayerConfig.AmTone(220f, 5.5f, 0.7f, 0.8f, "Primary Theta carrier"),
-          LayerConfig.AmTone(225f, 5.5f, 0.4f, 0.2f, "Harmonic enhancement")
+          LayerConfig.AmTone(
+            carrierHz: 220f,
+            modulationHz: 5.5f,
+            depth: 0.7f,
+            weight: 0.8f,
+            description: "Primary Theta carrier"
+          ),
+          LayerConfig.AmTone(
+            carrierHz: 225f,
+            modulationHz: 5.5f,
+            depth: 0.4f,
+            weight: 0.2f,
+            description: "Harmonic enhancement"
+          )
         ]
     };
 
@@ -67,7 +91,13 @@ namespace ToneSync.Presets.Presets
       Tags = ["focus", "relaxation", "stress-relief", "flow"],
       Layers =
         [
-          LayerConfig.AmTone(330f, 10.0f, 0.6f, 1.0f, "Alpha wave carrier")
+          LayerConfig.AmTone(
+            carrierHz : 330f,
+            modulationHz : 10.0f,
+            depth : 0.6f,
+            weight : 1.0f,
+            description : "Alpha wave carrier"
+          )
         ]
     };
 
@@ -87,7 +117,13 @@ namespace ToneSync.Presets.Presets
       Tags = ["focus", "alertness", "cognitive", "analytical"],
       Layers =
         [
-          LayerConfig.AmTone(440f, 20.0f, 0.5f, 1.0f, "Beta wave carrier")
+          LayerConfig.AmTone(
+            carrierHz : 440f,
+            modulationHz : 20.0f,
+            depth : 0.5f,
+            weight : 1.0f,
+            description : "Beta wave carrier"
+          )
         ]
     };
 
@@ -107,7 +143,13 @@ namespace ToneSync.Presets.Presets
       Tags = ["cognitive", "insight", "perception", "advanced"],
       Layers =
         [
-          LayerConfig.AmTone(512f, 40.0f, 0.3f, 1.0f, "Gamma wave carrier")
+          LayerConfig.AmTone(
+            carrierHz : 512f,
+            modulationHz : 40.0f,
+            depth : 0.3f,
+            weight : 1.0f,
+            description : "Gamma wave carrier"
+          )
         ]
     };
 
