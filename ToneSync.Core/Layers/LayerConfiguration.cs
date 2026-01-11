@@ -102,6 +102,17 @@ namespace ToneSync.Core.Layers
           nameof(Weight)
         );
 
+      if (channelMode == ChannelMode.Stereo && Math.Abs(steroFrequencyOffset) > 0.001f)
+      {
+        float rightFrequency = carrierFrequency + steroFrequencyOffset;
+        if (!AudioSettings.CarrierSettings.IsValid(rightFrequency, AudioSettings.SampleRate))
+          throw new InvalidConfigurationException(
+            $"Right channel frequency ({rightFrequency}Hz) after stereo offset " +
+            $"is outside valid range or too close to Nyquist frequency.",
+            nameof(StereoFrequencyOffset)
+          );
+      }
+
       ChannelMode = channelMode;
       StereoFrequencyOffset = steroFrequencyOffset;
       Pan = pan;

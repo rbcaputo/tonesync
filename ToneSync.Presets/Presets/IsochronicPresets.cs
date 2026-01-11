@@ -23,7 +23,7 @@ namespace ToneSync.Presets.Presets
     public static FrequencyPreset Ic_Delta_PowerNap => new()
     {
       ID = "ic_delta_01",
-      DisplayName = "PowerNap (3Hz)",
+      DisplayName = "Power Nap (3Hz)",
       Description = "Sharp 3Hz pulses for rapid physical recovery and restorative rest. " +
                     "Ideal for 15-20 minute power naps to quickly recharge energy levels.",
       Category = PresetCategory.Isochronic,

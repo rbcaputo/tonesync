@@ -32,8 +32,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 200f,
-            beatFrequencyHz: 2.5f,
+            carrierFrequency: 200f,
+            beatFrequency: 2.5f,
             weight: 1.0f,
             description: "Delta binaural beat"
           )
@@ -58,8 +58,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 250f,
-            beatFrequencyHz: 6.0f,
+            carrierFrequency: 250f,
+            beatFrequency: 6.0f,
             weight: 1.0f,
             description: "Theta binaural beat"
           )
@@ -84,8 +84,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 300f,
-            beatFrequencyHz: 10.0f,
+            carrierFrequency: 300f,
+            beatFrequency: 10.0f,
             weight: 1.0f,
             description: "Alpha binaural beat"
           )
@@ -110,8 +110,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 350f,
-            beatFrequencyHz: 18.0f,
+            carrierFrequency: 350f,
+            beatFrequency: 18.0f,
             weight: 1.0f,
             description: "Beta binaural beat"
           )
@@ -136,8 +136,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 400f,
-            beatFrequencyHz: 40.0f,
+            carrierFrequency: 400f,
+            beatFrequency: 40.0f,
             weight: 1.0f,
             description: "Gamma binaural beat"
           )
@@ -163,8 +163,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 280f,
-            beatFrequencyHz: 13.0f,
+            carrierFrequency: 280f,
+            beatFrequency: 13.0f,
             weight: 1.0f,
             description: "SMR binaural beat"
           )
@@ -191,14 +191,14 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 220f,
-            beatFrequencyHz: 6.0f,
+            carrierFrequency: 220f,
+            beatFrequency: 6.0f,
             weight: 0.6f,
             description: "Theta binaural component"
           ),
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 330f,
-            beatFrequencyHz: 10.0f,
+            carrierFrequency: 330f,
+            beatFrequency: 10.0f,
             weight: 0.4f,
             description: "Alpha binaural component"
           )
@@ -224,9 +224,9 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralAMTone(
-            baseCarrierHz: 300f,
-            beatFrequencyHz: 10.0f,
-            modulationHz: 10.0f,
+            carrierFrequency: 300f,
+            beatFrequency: 10.0f,
+            modulationFrequency: 10.0f,
             depth: 0.4f,
             weight: 1.0f,
             description: "Binaural + AM alpha enhancement"
@@ -253,8 +253,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 150f,
-            beatFrequencyHz: 1.0f,
+            carrierFrequency: 150f,
+            beatFrequency: 1.0f,
             weight: 1.0f,
             description: "Ultra-slow delta binaural"
           )
@@ -279,14 +279,14 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 300f,
-            beatFrequencyHz: 10.0f,
+            carrierFrequency: 300f,
+            beatFrequency: 10.0f,
             weight: 0.7f,
             description: "Primary alpha beat"
           ),
           LayerConfig.BinauralBeat(
-            baseCarrierHz: 240f,
-            beatFrequencyHz: 5.0f,
+            carrierFrequency: 240f,
+            beatFrequency: 5.0f,
             weight: 0.3f,
             description: "Supporting theta beat"
           )

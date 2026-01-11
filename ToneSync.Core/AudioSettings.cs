@@ -74,9 +74,9 @@
     public static class ModulationSettings
     {
       /// <summary>
-      /// Minimum modulation frequency (0.1Hz).
+      /// Minimum modulation frequency (0Hz).
       /// </summary>
-      public const float Minimum = 0.1f;
+      public const float Minimum = 0.0f;
 
       /// <summary>
       /// Maximum modulation frequency (100Hz).

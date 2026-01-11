@@ -38,7 +38,7 @@ namespace ToneSync.Presets.Models
     /// </summary>
     public required IReadOnlyList<LayerConfig> Layers
     {
-      get => _layers ?? Array.Empty<LayerConfig>();
+      get => _layers ?? [];
       init
       {
         if (value is null || value.Count == 0)
@@ -97,15 +97,15 @@ namespace ToneSync.Presets.Models
         LayerConfig layer = Layers[i];
 
         // Validate carrier frequency
-        if (!AudioSettings.CarrierSettings.IsValid(layer.CarrierHz, AudioSettings.SampleRate))
+        if (!AudioSettings.CarrierSettings.IsValid(layer.CarrierFrequency, AudioSettings.SampleRate))
           throw new PresetValidationException(
-            $"Layer {i}: Carrier frequency {layer.CarrierHz} Hz is outside valid range " +
+            $"Layer {i}: Carrier frequency {layer.CarrierFrequency} Hz is outside valid range " +
             $"({AudioSettings.CarrierSettings.Minimum}-{AudioSettings.CarrierSettings.Maximum}Hz).",
-            $"Layers[{i}].CarrierHz"
+            $"Layers[{i}].CarrierFrequency"
           );
 
         // Validate resulting frequency after stereo offset
-        float rightChannelFreq = layer.CarrierHz + layer.StereoFrequencyOffset;
+        float rightChannelFreq = layer.CarrierFrequency + layer.StereoFrequencyOffset;
         if (Math.Abs(layer.StereoFrequencyOffset) > 0.001f)
         {
           if (!AudioSettings.CarrierSettings.IsValid(rightChannelFreq, AudioSettings.SampleRate))
@@ -117,11 +117,11 @@ namespace ToneSync.Presets.Models
         }
 
         // Validate modulation frequency (if used)
-        if (layer.ModulationHz > 0.0f && !AudioSettings.ModulationSettings.IsValid(layer.ModulationHz))
+        if (layer.ModulationFrequency > 0.0f && !AudioSettings.ModulationSettings.IsValid(layer.ModulationFrequency))
           throw new PresetValidationException(
-            $"Layer {i}: Modulation frequency {layer.ModulationHz} Hz is outside valid range " +
+            $"Layer {i}: Modulation frequency {layer.ModulationFrequency} Hz is outside valid range " +
             $"({AudioSettings.ModulationSettings.Minimum}-{AudioSettings.ModulationSettings.Maximum}Hz).",
-            $"Layers[{i}].ModulationHz"
+            $"Layers[{i}].ModulationFrequency"
           );
 
         // Validate modulation depth

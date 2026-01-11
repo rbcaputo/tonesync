@@ -14,12 +14,12 @@ namespace ToneSync.Presets.Models
     /// <summary>
     /// Carrier frequency in Hz (20-2000Hz range).
     /// </summary>
-    public required float CarrierHz { get; init; }
+    public required float CarrierFrequency { get; init; }
 
     /// <summary>
     /// Modulation frequency in Hz (0 = no modulation, 0.1-100Hz range).
     /// </summary>
-    public required float ModulationHz { get; init; }
+    public required float ModulationFrequency { get; init; }
 
     /// <summary>
     /// Modulation depth (0.0 = no modulation, 1.0 = full modulation).
@@ -63,8 +63,8 @@ namespace ToneSync.Presets.Models
       float weight,
       ChannelMode channelMode = ChannelMode.Mono
     ) => new(
-      CarrierHz,
-      ModulationHz,
+      CarrierFrequency,
+      ModulationFrequency,
       ModulationDepth,
       weight,
       channelMode,
@@ -88,8 +88,8 @@ namespace ToneSync.Presets.Models
       string? description = null
     ) => new()
     {
-      CarrierHz = frequency,
-      ModulationHz = 0.0f,
+      CarrierFrequency = frequency,
+      ModulationFrequency = 0.0f,
       ModulationDepth = 0.0f,
       Weight = weight,
       Pan = pan,
@@ -100,78 +100,78 @@ namespace ToneSync.Presets.Models
     /// Creates an amplitude-modulated mono layer configuration.
     /// Useful for brainwave entrainment and therapeutic audio.
     /// </summary>
-    /// <param name="carrierHz">Carrier frequency in Hz.</param>
-    /// <param name="modulationHz">Modulation frequency in Hz.</param>
+    /// <param name="carrierFrequency">Carrier frequency in Hz.</param>
+    /// <param name="modulationFrequency">Modulation frequency in Hz.</param>
     /// <param name="depth">Modulation depth (0.0-1.0).</param>
     /// <param name="weight">Output volume (default: 1.0).</param>
     /// <param name="pan"></param>
     /// <param name="description">Optional description.</param>
     /// <returns>A LayerConfig with amplitude modulation.</returns>
     public static LayerConfig AmTone(
-      float carrierHz,
-      float modulationHz,
+      float carrierFrequency,
+      float modulationFrequency,
       float depth,
       float weight = 1.0f,
       float pan = 0.0f,
       string? description = null
     ) => new()
     {
-      CarrierHz = carrierHz,
-      ModulationHz = modulationHz,
+      CarrierFrequency = carrierFrequency,
+      ModulationFrequency = modulationFrequency,
       ModulationDepth = depth,
       Weight = weight,
       Pan = pan,
-      Description = description ?? $"AM Tone ({modulationHz} Hz)"
+      Description = description ?? $"AM Tone ({modulationFrequency}Hz)"
     };
 
     /// <summary>
     /// Creates a binaural beat stereo layer.
     /// The beat frequency is perceived as the difference between left and right carriers.
     /// </summary>
-    /// <param name="baseCarrierHz">Base carrier frequency (left channel).</param>
-    /// <param name="beatFrequencyHz">Perceived beat frequency (typically 0.5-40 Hz).</param>
+    /// <param name="carrierFrequency">Carrier frequency (left channel).</param>
+    /// <param name="beatFrequency">Perceived beat frequency (typically 0.5-40Hz).</param>
     /// <param name="weight">Output volume.</param>
     /// <param name="description">Optional description.</param>
     public static LayerConfig BinauralBeat(
-      float baseCarrierHz,
-      float beatFrequencyHz,
+      float carrierFrequency,
+      float beatFrequency,
       float weight = 1.0f,
       string? description = null
     ) => new()
     {
-      CarrierHz = baseCarrierHz,
-      ModulationHz = 0.0f,
+      CarrierFrequency = carrierFrequency,
+      ModulationFrequency = 0.0f,
       ModulationDepth = 0.0f,
       Weight = weight,
-      StereoFrequencyOffset = beatFrequencyHz,
-      Description = description ?? $"Binaural {beatFrequencyHz}Hz"
+      StereoFrequencyOffset = beatFrequency,
+      Description = description ?? $"Binaural {beatFrequency}Hz"
     };
 
     /// <summary>
     /// Creates a binaural beat with amplitude modulation.
     /// Combines stereo beat effect with AM modulation.
     /// </summary>
-    /// <param name="baseCarrierHz">Base carrier frequency (left channel).</param>
-    /// <param name="beatFrequencyHz">Perceived beat frequency (typically 0.5-40 Hz).</param>
-    /// <param name="modulationHz">Modulation frequency in Hz.</param>
+    /// <param name="carrierFrequency">Carrier frequency (left channel).</param>
+    /// <param name="beatFrequency">Perceived beat frequency (typically 0.5-40Hz).</param>
+    /// <param name="modulationFrequency">Modulation frequency in Hz.</param>
     /// <param name="depth">Modulation depth (0.0-1.0).</param>
     /// <param name="weight">Output volume.</param>
     /// <param name="description">Optional description.</param>
     public static LayerConfig BinauralAMTone(
-      float baseCarrierHz,
-      float beatFrequencyHz,
-      float modulationHz,
+      float carrierFrequency,
+      float beatFrequency,
+      float modulationFrequency,
       float depth,
       float weight,
       string? description = null
     ) => new()
     {
-      CarrierHz = baseCarrierHz,
-      ModulationHz = modulationHz,
+      CarrierFrequency = carrierFrequency,
+      ModulationFrequency = modulationFrequency,
       ModulationDepth = depth,
       Weight = weight,
-      StereoFrequencyOffset = beatFrequencyHz,
-      Description = description ?? $"Binaural {beatFrequencyHz}Hz + AM {modulationHz}Hz"
+      StereoFrequencyOffset = beatFrequency,
+      Description = description ?? $"Binaural {beatFrequency}Hz + AM {modulationFrequency}Hz"
     };
   }
 }

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using ToneSync.App.Services;
+using ToneSync.App.Views;
 using ToneSync.Core;
 using ToneSync.Presets.Engine;
 using ToneSync.Presets.Models;
@@ -31,6 +32,8 @@ namespace ToneSync.App.ViewModels
     private OutputProfile _outputProfile = OutputProfile.DeviceSpeaker;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NowPlayingText))]
+    [NotifyCanExecuteChangedFor(nameof(StopCommand))]
     private FrequencyPreset? _currentPreset;
 
     [ObservableProperty]
@@ -202,6 +205,21 @@ namespace ToneSync.App.ViewModels
 
         _logger.LogError(ex, "Retry failed");
       }
+    }
+
+    [RelayCommand]
+    private async Task NavigateToPreset(FrequencyPreset preset)
+    {
+      if (preset is null)
+        return;
+
+      await Shell.Current.GoToAsync(
+        nameof(PresetDetailPage),
+        new Dictionary<string, object>
+        {
+          ["Preset"] = preset
+        }
+      );
     }
 
     /// <summary>

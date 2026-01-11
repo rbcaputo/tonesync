@@ -18,6 +18,7 @@ namespace ToneSync.App.ViewModels
     private readonly ILogger<PresetDetailViewModel> _logger;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
     private FrequencyPreset? _preset;
 
     [ObservableProperty]

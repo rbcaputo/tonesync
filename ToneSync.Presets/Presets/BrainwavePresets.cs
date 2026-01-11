@@ -26,15 +26,15 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.AmTone(
-            carrierHz: 174f,
-            modulationHz: 2.0f,
+            carrierFrequency: 174f,
+            modulationFrequency: 2.0f,
             depth: 0.6f,
             weight: 0.7f,
             description: "Primary Delta carrier"
           ),
           LayerConfig.AmTone(
-            carrierHz: 176f,
-            modulationHz: 2.0f,
+            carrierFrequency: 176f,
+            modulationFrequency: 2.0f,
             depth: 0.3f,
             weight: 0.3f,
             description: "Supporting harmonic"
@@ -59,15 +59,15 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.AmTone(
-            carrierHz: 220f,
-            modulationHz: 5.5f,
+            carrierFrequency: 220f,
+            modulationFrequency: 5.5f,
             depth: 0.7f,
             weight: 0.8f,
             description: "Primary Theta carrier"
           ),
           LayerConfig.AmTone(
-            carrierHz: 225f,
-            modulationHz: 5.5f,
+            carrierFrequency: 225f,
+            modulationFrequency: 5.5f,
             depth: 0.4f,
             weight: 0.2f,
             description: "Harmonic enhancement"
@@ -92,8 +92,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.AmTone(
-            carrierHz : 330f,
-            modulationHz : 10.0f,
+            carrierFrequency : 330f,
+            modulationFrequency : 10.0f,
             depth : 0.6f,
             weight : 1.0f,
             description : "Alpha wave carrier"
@@ -118,8 +118,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.AmTone(
-            carrierHz : 440f,
-            modulationHz : 20.0f,
+            carrierFrequency : 440f,
+            modulationFrequency : 20.0f,
             depth : 0.5f,
             weight : 1.0f,
             description : "Beta wave carrier"
@@ -144,8 +144,8 @@ namespace ToneSync.Presets.Presets
       Layers =
         [
           LayerConfig.AmTone(
-            carrierHz : 512f,
-            modulationHz : 40.0f,
+            carrierFrequency : 512f,
+            modulationFrequency : 40.0f,
             depth : 0.3f,
             weight : 1.0f,
             description : "Gamma wave carrier"
