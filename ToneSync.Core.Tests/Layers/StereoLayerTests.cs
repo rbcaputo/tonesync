@@ -9,7 +9,7 @@ namespace ToneSync.Core.Tests.Layers
     [Fact]
     public void Inactive_Layer_Outputs_Silence_On_Both_Channels()
     {
-      var config = new LayerConfiguration(440f, 0f, 0f, 0f, ChannelMode.Stereo);
+      var config = new LayerConfiguration(440f, 2f, 0f, 0f, ChannelMode.Stereo);
 
       var layer = new StereoLayer();
       layer.Initialize(AudioSettings.SampleRate, 0.1f, 0.1f);

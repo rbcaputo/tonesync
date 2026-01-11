@@ -51,7 +51,7 @@ namespace ToneSync.Core.Tests.Layers
       var bufferNoAM = new float[AudioSettings.RecommendedBufferSize];
       var bufferAM = new float[AudioSettings.RecommendedBufferSize];
 
-      var noAmConfig = new LayerConfiguration(440f, 0f, 0f, 1f);
+      var noAmConfig = new LayerConfiguration(440f, 2f, 0f, 1f);
       var amConfig = new LayerConfiguration(440, 5f, 1f, 1f);
 
       layer.UpdateAndProcess(bufferNoAM, AudioSettings.SampleRate, noAmConfig);
