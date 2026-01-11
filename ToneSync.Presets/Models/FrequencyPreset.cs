@@ -104,6 +104,18 @@ namespace ToneSync.Presets.Models
             $"Layers[{i}].CarrierHz"
           );
 
+        // Validate resulting frequency after stereo offset
+        float rightChannelFreq = layer.CarrierHz + layer.StereoFrequencyOffset;
+        if (Math.Abs(layer.StereoFrequencyOffset) > 0.001f)
+        {
+          if (!AudioSettings.CarrierSettings.IsValid(rightChannelFreq, AudioSettings.SampleRate))
+            throw new PresetValidationException(
+              $"Layer {i}: Right channel frequency ({rightChannelFreq}Hz) is " +
+              $"outside valid range after applying stereo offset of {layer.StereoFrequencyOffset}Hz. ",
+              $"Layers[{i}].StereoFrequencyOffset"
+            );
+        }
+
         // Validate modulation frequency (if used)
         if (layer.ModulationHz > 0.0f && !AudioSettings.ModulationSettings.IsValid(layer.ModulationHz))
           throw new PresetValidationException(
@@ -124,6 +136,13 @@ namespace ToneSync.Presets.Models
           throw new PresetValidationException(
             $"Layer {i}: Weight {layer.Weight} is outside valid range (0.0-1.0).",
             $"Layers[{i}].Weight"
+          );
+
+        // Validate pan
+        if (layer.Pan < -1.0f || layer.Pan > 1.0f)
+          throw new PresetValidationException(
+            $"Layer {i}: Pan {layer.Pan} is outside valid range (-1.0 to 1.0).",
+            $"Layers[{i}].Pan"
           );
       }
     }

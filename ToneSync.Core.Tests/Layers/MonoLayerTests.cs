@@ -1,9 +1,8 @@
-﻿using ToneSync.Core;
-using ToneSync.Core.Layers;
+﻿using ToneSync.Core.Layers;
 
 namespace ToneSync.Core.Tests.Layers
 {
-  public sealed class LayerTests
+  public sealed class MonoLayerTests
   {
     [Fact]
     public void Inactive_Layer_Outputs_Silence()
@@ -183,7 +182,10 @@ namespace ToneSync.Core.Tests.Layers
       CarrierFrequency = carrHz,
       ModulatorFrequency = modHz,
       ModulatorDepth = modDepth,
-      Weight = weight
+      Weight = weight,
+      ChannelMode = ChannelMode.Mono,
+      StereoFrequencyOffset = 0f,
+      Pan = 0f
     };
 
     private static LayerConfiguration InactiveConfig() =>
