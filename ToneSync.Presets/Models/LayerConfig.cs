@@ -55,31 +55,22 @@ namespace ToneSync.Presets.Models
     /// Maps this domain model to the Core engine's high-performance configuration record.
     /// Performs validation during conversion.
     /// </summary>
-    /// <param name="isActive">Whether this layer should currently be audible.</param>
+    /// <param name="weight">Whether this layer should currently be audible.</param>
     /// <param name="channelMode"></param>
     /// <returns>A validated LayerConfiguration for the audio engine.</returns>
     /// <exception cref="Core.Exceptions.InvalidConfigurationException">Thrown if validation fails.</exception>
     public LayerConfiguration ToCoreConfig(
-      bool isActive,
+      float weight,
       ChannelMode channelMode = ChannelMode.Mono
-    )
-    {
-      // Determine if this specific layer should be stereo
-      bool isStereoLayer = Math.Abs(StereoFrequencyOffset) > 0.001f;
-      ChannelMode layerMode = isStereoLayer ? ChannelMode.Stereo : ChannelMode.Mono;
-
-      return new()
-      {
-        CarrierFrequency = CarrierHz,
-        ModulatorFrequency = ModulationHz,
-        ModulatorDepth = ModulationDepth,
-        Weight = Weight,
-        IsActive = isActive,
-        ChannelMode = layerMode,
-        StereoFrequencyOffset = StereoFrequencyOffset,
-        Pan = Pan
-      };
-    }
+    ) => new(
+      CarrierHz,
+      ModulationHz,
+      ModulationDepth,
+      weight,
+      channelMode,
+      StereoFrequencyOffset,
+      Pan
+    );
 
     /// <summary>
     /// Creates a pure tone mono layer configuration (no modulation).

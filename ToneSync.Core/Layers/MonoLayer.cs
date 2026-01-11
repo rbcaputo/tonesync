@@ -110,7 +110,7 @@ namespace ToneSync.Core.Layers
     )
     {
       // Early exit (saves CPU)
-      if (!_isInitialized || config is null || !config.IsActive)
+      if (!_isInitialized)
       {
         buffer.Clear();
         return;

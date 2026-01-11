@@ -85,7 +85,8 @@ namespace ToneSync.Core
     /// </remarks>
     /// <exception cref="ArgumentException">Thrown if layerCount exceeds max.</exception>
     public void Initialize(
-      int layerCount, float sampleRate,
+      int layerCount,
+      float sampleRate,
       ChannelMode outputMode = ChannelMode.Mono,
       float attackSeconds = AudioSettings.EnvelopeSettings.DefaultAttackSeconds,
       float releaseSeconds = AudioSettings.EnvelopeSettings.DefaultReleaseSeconds
@@ -94,7 +95,8 @@ namespace ToneSync.Core
       if (layerCount <= 0 || layerCount > AudioSettings.MaxLayers)
         throw new ArgumentException(
           $"Layer count must be between 1 and {AudioSettings.MaxLayers}. Got: {layerCount}",
-          nameof(layerCount));
+          nameof(layerCount)
+        );
 
       _activeLayerCount = layerCount;
       _outputMode = outputMode;
@@ -140,23 +142,29 @@ namespace ToneSync.Core
           "Mixer is configured for stereo output. Use RenderStereo() instead."
         );
 
-      // Clear output buffer
+      // ALWAYS clear – even if no layers or silent configs
       outputBuffer.Clear();
 
-      // Resize temp buffer if needed (should only happen once at startup)
-      if (_monoTempBuffer.Length < outputBuffer.Length)
-        _monoTempBuffer = new float[outputBuffer.Length];
-
       // Render each active layer
-      int layersToRender = Math.Min(_activeLayerCount, configs.Length);
+      int layersToRender = _activeLayerCount;
+      if (configs.Length < layersToRender)
+        layersToRender = configs.Length;
 
       for (int i = 0; i < layersToRender; i++)
       {
+        if (_monoLayers[i] is null)
+          continue;
+
+        LayerConfiguration config = configs[i];
+
+        if (_monoTempBuffer is null || _monoTempBuffer.Length < outputBuffer.Length)
+          _monoTempBuffer = new float[outputBuffer.Length];
+
         Span<float> tempSpan = _monoTempBuffer.AsSpan(0, outputBuffer.Length);
         tempSpan.Clear();
 
         // Render layer into temporary buffer
-        _monoLayers[i].UpdateAndProcess(tempSpan, sampleRate, configs[i]);
+        _monoLayers[i].UpdateAndProcess(tempSpan, sampleRate, config);
 
         // Additively mix into output buffer
         MixBuffers(outputBuffer, tempSpan);
@@ -191,36 +199,74 @@ namespace ToneSync.Core
       ReadOnlySpan<LayerConfiguration> configs
     )
     {
+      if (_outputMode != ChannelMode.Stereo)
+        throw new InvalidOperationException(
+          "Mixer is configured for mono output. Use RenderMono() instead."
+        );
+
       if (leftBuffer.Length != rightBuffer.Length)
         throw new ArgumentException(
           "Left and right buffers must have the same length."
         );
 
+      // ALWAYS clear – even if no layers or silent configs
       leftBuffer.Clear();
       rightBuffer.Clear();
 
       int bufferSize = leftBuffer.Length;
-
-      // Resize temp buffers if needed
-      if (_monoTempBuffer.Length < bufferSize)
-      {
-        _monoTempBuffer = new float[bufferSize];
-        _leftTempBuffer = new float[bufferSize];
-        _rightTempBuffer = new float[bufferSize];
-      }
-
-      int layersToRender = Math.Min(_activeLayerCount, configs.Length);
+      int layersToRender = _activeLayerCount;
+      if (configs.Length < layersToRender)
+        layersToRender = configs.Length;
 
       for (int i = 0; i < layersToRender; i++)
       {
         LayerConfiguration config = configs[i];
 
         if (config.ChannelMode == ChannelMode.Stereo)
-          // Render stereo layer
-          RenderStereoLayer(i, leftBuffer, rightBuffer, bufferSize, sampleRate, config);
+        {
+          StereoLayer layer = _stereoLayers[i];
+          if (layer is null)
+            continue;
+
+          if (_leftTempBuffer is null || _leftTempBuffer.Length < bufferSize)
+            _leftTempBuffer = new float[bufferSize];
+          if (_rightTempBuffer is null || _rightTempBuffer.Length < bufferSize)
+            _rightTempBuffer = new float[bufferSize];
+
+          Span<float> leftSpan = _leftTempBuffer.AsSpan(0, bufferSize);
+          Span<float> rightSpan = _rightTempBuffer.AsSpan(0, bufferSize);
+          leftSpan.Clear();
+          rightSpan.Clear();
+
+          layer.UpdateAndProcess(leftSpan, rightSpan, sampleRate, config);
+          MixBuffers(leftBuffer, leftSpan);
+          MixBuffers(rightBuffer, rightSpan);
+        }
         else
-          // Render mono layer and pan to stereo
-          RenderMonoLayerToStereo(i, leftBuffer, rightBuffer, bufferSize, sampleRate, config);
+        {
+          MonoLayer layer = _monoLayers[i];
+          if (layer is null)
+            continue;
+
+          if (_monoTempBuffer is null || _monoTempBuffer.Length < bufferSize)
+            _monoTempBuffer = new float[bufferSize];
+
+          Span<float> span = _monoTempBuffer.AsSpan(0, bufferSize);
+          span.Clear();
+
+          layer.UpdateAndProcess(span, sampleRate, config);
+
+          float panAngle = (config.Pan + 1f) * 0.25f * MathF.PI;
+          float leftGain = MathF.Cos(panAngle);
+          float rightGain = MathF.Sin(panAngle);
+
+          for (int j = 0; j < bufferSize; j++)
+          {
+            float sample = span[j];
+            leftBuffer[j] += sample * leftGain;
+            rightBuffer[j] += sample * rightGain;
+          }
+        }
       }
 
       // Apply headroom to both channels
@@ -229,33 +275,52 @@ namespace ToneSync.Core
     }
 
     /// <summary>
-    /// Renders a stereo layer with frequency offset (for binaural beats).
+    /// Gets the current envelope value for a specific layer.
+    /// Useful for UI metering.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void RenderStereoLayer(
-      int layerIndex,
-      Span<float> leftBuffer,
-      Span<float> rightBuffer,
-      int bufferSize,
-      float sampleRate,
-      LayerConfiguration config
-    )
+    /// <param name="layerIndex">Zero-based layer index.</param>
+    /// <returns>Envelope value (0.0 to 1.0), or 0.0 if index is invalid.</returns>
+    public float GetLayerEnvelopeValue(int layerIndex)
     {
-      Span<float> leftTempBuffer = _leftTempBuffer.AsSpan(0, bufferSize);
-      Span<float> rightTempBuffer = _rightTempBuffer.AsSpan(0, bufferSize);
+      if (layerIndex < 0 || layerIndex >= _activeLayerCount)
+        return 0.0f;
 
-      leftTempBuffer.Clear();
-      rightTempBuffer.Clear();
+      // Return envelope from whichever layer type is being used
+      // In stereo mode, stereo layers take precedence
+      return _outputMode == ChannelMode.Stereo
+        ? _stereoLayers[layerIndex]?.CurrentEnvelopeValue ?? 0.0f
+        : _monoLayers[layerIndex]?.CurrentEnvelopeValue ?? 0.0f;
+    }
 
-      // Render both channels
-      _stereoLayers[layerIndex].UpdateAndProcess(
-        leftTempBuffer, rightTempBuffer,
-        sampleRate, config
-      );
+    /// <remarks>
+    /// This method does not stop audio immediately.
+    /// Each layer will fade out according to its configured release time.
+    /// </remarks>
+    public void TriggerReleaseAll()
+    {
+      for (int i = 0; i < _activeLayerCount; i++)
+      {
+        _monoLayers[i]?.TriggerRelease();
+        _stereoLayers[i]?.TriggerRelease();
+      }
+    }
 
-      // Mix into output buffers
-      MixBuffers(leftBuffer, leftTempBuffer);
-      MixBuffers(rightBuffer, rightTempBuffer);
+    /// <summary>
+    /// Resets all layers to prevent clicks on restart.
+    /// Should be called when audio engine is fully stopped.
+    /// </summary>
+    /// <remarks>
+    /// This method resets internal oscillator and envelope state.
+    /// It should only be called when the audio engine is fully stopped,
+    /// as it may cause discontinuities if used during active playback.
+    /// </remarks>
+    public void Reset()
+    {
+      for (int i = 0; i < _activeLayerCount; i++)
+      {
+        _monoLayers[i]?.Reset();
+        _stereoLayers[i]?.Reset();
+      }
     }
 
     /// <summary>
@@ -278,93 +343,6 @@ namespace ToneSync.Core
     {
       for (int i = 0; i < buffer.Length; i++)
         buffer[i] *= MixHeadroom;
-    }
-
-    /// <summary>
-    /// Gets the current envelope value for a specific layer.
-    /// Useful for UI metering.
-    /// </summary>
-    /// <param name="layerIndex">Zero-based layer index.</param>
-    /// <returns>Envelope value (0.0 to 1.0), or 0.0 if index is invalid.</returns>
-    public float GetLayerEnvelopeValue(int layerIndex)
-    {
-      if (layerIndex < 0 || layerIndex >= _activeLayerCount)
-        return 0.0f;
-
-      // Return envelope from whichever layer type is being used
-      // In stereo mode, stereo layers take precedence
-      return _outputMode == ChannelMode.Stereo
-        ? _stereoLayers[layerIndex].CurrentEnvelopeValue
-        : _monoLayers[layerIndex].CurrentEnvelopeValue;
-    }
-
-    /// <remarks>
-    /// This method does not stop audio immediately.
-    /// Each layer will fade out according to its configured release time.
-    /// </remarks>
-    public void TriggerReleaseAll()
-    {
-      for (int i = 0; i < _activeLayerCount; i++)
-      {
-        _monoLayers[i].TriggerRelease();
-        _stereoLayers[i].TriggerRelease();
-      }
-    }
-
-    /// <summary>
-    /// Resets all layers to prevent clicks on restart.
-    /// Should be called when audio engine is fully stopped.
-    /// </summary>
-    /// <remarks>
-    /// This method resets internal oscillator and envelope state.
-    /// It should only be called when the audio engine is fully stopped,
-    /// as it may cause discontinuities if used during active playback.
-    /// </remarks>
-    public void Reset()
-    {
-      for (int i = 0; i < _activeLayerCount; i++)
-      {
-        _monoLayers[i].Reset();
-        _stereoLayers[i].Reset();
-      }
-    }
-
-    /// <summary>
-    /// Renders a mono layer and pans it to stereo using constant-power panning.
-    /// Pan = -1.0 (full left), 0.0 (center), +1.0 (full right)
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void RenderMonoLayerToStereo(
-      int layerIndex,
-      Span<float> leftBuffer,
-      Span<float> rightBuffer,
-      int bufferSize,
-      float sampleRate,
-      LayerConfiguration config
-    )
-    {
-      Span<float> monoTempBuffer = _monoTempBuffer.AsSpan(0, bufferSize);
-
-      monoTempBuffer.Clear();
-
-      // Render mono channel
-      _monoLayers[layerIndex].UpdateAndProcess(monoTempBuffer, sampleRate, config);
-
-      // Calculate constant-power pan gains
-      // Formula: Left = cos(pan * π/4), Right = sin(pan * π/4)
-      // This ensures constant energy: L^2 + R^2 = 1
-      float panAngle = (config.Pan + 1.0f) * 0.25f * MathF.PI; // Map [-1, 1] to [0, π/2]
-      float leftGain = MathF.Cos(panAngle);
-      float rightGain = MathF.Sin(panAngle);
-
-      // Pan and mix into output buffers
-      for (int i = 0; i < bufferSize; i++)
-      {
-        float sample = monoTempBuffer[i];
-
-        leftBuffer[i] += sample * leftGain;
-        rightBuffer[i] += sample * rightGain;
-      }
     }
   }
 }

@@ -4,20 +4,12 @@ namespace ToneSync.Core.Tests.Layers
 {
   public sealed class StereoLayerTests
   {
+    private readonly LayerConfiguration _config = new(440f, 2f, 0.5f, 1f, ChannelMode.Stereo, 10f, 0f);
+
     [Fact]
     public void Inactive_Layer_Outputs_Silence_On_Both_Channels()
     {
-      var config = new LayerConfiguration()
-      {
-        IsActive = false,
-        CarrierFrequency = 440f,
-        ModulatorFrequency = 0f,
-        ModulatorDepth = 0f,
-        Weight = 0f,
-        ChannelMode = ChannelMode.Stereo,
-        StereoFrequencyOffset = 0f,
-        Pan = 0f
-      };
+      var config = new LayerConfiguration(440f, 0f, 0f, 0f, ChannelMode.Stereo);
 
       var layer = new StereoLayer();
       layer.Initialize(AudioSettings.SampleRate, 0.1f, 0.1f);
@@ -51,7 +43,7 @@ namespace ToneSync.Core.Tests.Layers
         leftBuffer,
         rightBuffer,
         AudioSettings.SampleRate,
-        ActiveConfig()
+        _config
       );
 
       Assert.All(leftBuffer, s => Assert.False(float.IsNaN(s)));
@@ -67,13 +59,11 @@ namespace ToneSync.Core.Tests.Layers
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize];
       var rightBuffer = new float[AudioSettings.RecommendedBufferSize];
 
-      var config = ActiveConfig() with { StereoFrequencyOffset = 10f };
-
       layer.UpdateAndProcess(
         leftBuffer,
         rightBuffer,
         AudioSettings.SampleRate,
-        config
+        _config
       );
 
       bool isDifferent = false;
@@ -96,7 +86,7 @@ namespace ToneSync.Core.Tests.Layers
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 2];
       var rightBuffer = new float[AudioSettings.RecommendedBufferSize / 2];
 
-      var config = ActiveConfig() with { StereoFrequencyOffset = 0f };
+      var config = new LayerConfiguration(440f, 2f, 0.5f, 1f, ChannelMode.Stereo);
 
       layer.UpdateAndProcess(
         leftBuffer,
@@ -124,7 +114,7 @@ namespace ToneSync.Core.Tests.Layers
           leftBuffer,
           rightBuffer,
           AudioSettings.SampleRate,
-          ActiveConfig()
+          _config
         );
 
         Assert.All(leftBuffer, s =>
@@ -153,7 +143,7 @@ namespace ToneSync.Core.Tests.Layers
         leftBuffer,
         rightBuffer,
         AudioSettings.SampleRate,
-        ActiveConfig()
+        _config
       );
 
       Assert.True(layer.CurrentEnvelopeValue > 0f);
@@ -181,13 +171,13 @@ namespace ToneSync.Core.Tests.Layers
           leftBufferA,
           rightBufferA,
           AudioSettings.SampleRate,
-          ActiveConfig()
+          _config
         );
         layerB.UpdateAndProcess(
           leftBufferB,
           rightBufferB,
           AudioSettings.SampleRate,
-          ActiveConfig()
+          _config
         );
 
         for (var j = 0; j < leftBufferA.Length; j++)
@@ -197,17 +187,5 @@ namespace ToneSync.Core.Tests.Layers
         }
       }
     }
-
-    private static LayerConfiguration ActiveConfig() => new()
-    {
-      IsActive = true,
-      CarrierFrequency = 440f,
-      ModulatorFrequency = 2f,
-      ModulatorDepth = 0.5f,
-      Weight = 1f,
-      ChannelMode = ChannelMode.Stereo,
-      StereoFrequencyOffset = 10f,
-      Pan = 0f
-    };
   }
 }

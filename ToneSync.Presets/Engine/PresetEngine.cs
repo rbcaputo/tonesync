@@ -94,9 +94,9 @@ namespace ToneSync.Presets.Engine
       {
         // Convert and validate each layer
         LayerConfiguration coreConfig = layer.ToCoreConfig(
-          isActive: false,
+          0f, // Start inactive
           channelMode: channelMode
-        ); // Start inactive
+        );
         coreConfig.ValidateForSampleRate(_audioEngine.SampleRate);
         coreConfigs.Add(coreConfig);
       }
@@ -158,14 +158,14 @@ namespace ToneSync.Presets.Engine
       if (_activePreset is null)
         return;
 
-      ChannelMode currentMode = _audioEngine.ChannelMode;
-
       // Rebuild configurations with new active state
       List<LayerConfiguration> updatedConfigs = new(_activePreset.Layers.Count);
 
       foreach (LayerConfig layer in _activePreset.Layers)
       {
-        LayerConfiguration config = layer.ToCoreConfig(isActive);
+        LayerConfiguration config = isActive
+          ? layer.ToCoreConfig(1f)
+          : layer.ToCoreConfig(0f);
         updatedConfigs.Add(config);
       }
 

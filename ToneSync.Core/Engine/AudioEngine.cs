@@ -15,6 +15,10 @@ namespace ToneSync.Core.Engine
     private readonly float _sampleRate;
     private readonly Lock _initializationLock = new();
 
+    // Engine-owned temp buffers for mono to stereo and stereo to mono paths
+    private float[] _leftTempBuffer = new float[AudioSettings.MaxBufferSize];
+    private float[] _rightTempBuffer = new float[AudioSettings.MaxBufferSize];
+
     // Lock-free configuration snapshot (accessed by audio thread)
     private LayerConfiguration[] _configSnapshot = [];
 
@@ -268,7 +272,23 @@ namespace ToneSync.Core.Engine
 
         // Render audio using snapshot (no locks needed)
         ReadOnlySpan<LayerConfiguration> configSpan = _configSnapshot.AsSpan();
-        _mixer.RenderMono(buffer, _sampleRate, configSpan);
+
+
+        if (_channelMode == ChannelMode.Stereo) // Stereo mode: render to temp buffers and mix down to mono
+        {
+          Span<float> leftTempBuffer = _leftTempBuffer.AsSpan(0, buffer.Length);
+          Span<float> rightTempBuffer = _rightTempBuffer.AsSpan(0, buffer.Length);
+          leftTempBuffer.Clear();
+          rightTempBuffer.Clear();
+
+          _mixer.RenderStereo(leftTempBuffer, rightTempBuffer, _sampleRate, configSpan);
+
+          // Downmix stereo to mono
+          for (int i = 0; i < buffer.Length; i++)
+            buffer[i] = (leftTempBuffer[i] + rightTempBuffer[i]) * 0.5f;
+        }
+        else // Mono mode: direct rendering
+          _mixer.RenderMono(buffer, _sampleRate, configSpan);
 
         // Reset error counter on success
         _consecutiveErrorCount = 0;
@@ -321,11 +341,6 @@ namespace ToneSync.Core.Engine
     {
       ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-      if (_channelMode == ChannelMode.Mono)
-        throw new InvalidOperationException(
-          "Engine is configured for mono output. Use FillBuffer() instead."
-        );
-
       if (leftBuffer.Length != rightBuffer.Length)
         throw new ArgumentException(
           "Left and right buffers must have the same length."
@@ -344,7 +359,14 @@ namespace ToneSync.Core.Engine
           _configDirty = false;
 
         ReadOnlySpan<LayerConfiguration> configSpan = _configSnapshot.AsSpan();
-        _mixer.RenderStereo(leftBuffer, rightBuffer, _sampleRate, configSpan);
+
+        if (_channelMode == ChannelMode.Mono) // Mono mode: render once and duplicate to both channels
+        {
+          _mixer.RenderMono(leftBuffer, _sampleRate, configSpan);
+          leftBuffer.CopyTo(rightBuffer);
+        }
+        else // Stereo mode: direct rendering
+          _mixer.RenderStereo(leftBuffer, rightBuffer, _sampleRate, configSpan);
 
         _consecutiveErrorCount = 0;
       }

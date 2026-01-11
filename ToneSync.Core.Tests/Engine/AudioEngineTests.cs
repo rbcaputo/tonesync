@@ -6,6 +6,8 @@ namespace ToneSync.Core.Tests.Engine
 {
   public sealed class AudioEngineTests
   {
+    private readonly LayerConfiguration _config = new(440f, 2f, 1f, 1f);
+
     [Fact]
     public void Constructor_Invalid_Sample_Rate_Throws()
     {
@@ -37,7 +39,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Initialize_Sets_Is_Initialized()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       Assert.True(engine.IsInitialized);
     }
 
@@ -45,7 +47,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Initialize_Defaults_To_Mono_Mode()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       Assert.Equal(ChannelMode.Mono, engine.ChannelMode);
     }
 
@@ -53,7 +55,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Initialize_With_Stereo_Mode_Sets_Channel_Mode()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       Assert.Equal(ChannelMode.Stereo, engine.ChannelMode);
     }
 
@@ -73,7 +75,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Fill_Buffer_Not_Playing_Clears_Buffer()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
 
       var buffer = new float[AudioSettings.RecommendedBufferSize / 8];
 
@@ -87,7 +89,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Fill_Mono_Buffer_When_Playing_Generates_Non_Zero_Signal()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       engine.Start();
 
       var buffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -100,7 +102,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Fill_Stereo_Buffer_When_Playing_Generates_Non_Zero_Signal()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       engine.Start();
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -112,39 +114,38 @@ namespace ToneSync.Core.Tests.Engine
     }
 
     [Fact]
-    public void Fill_Mono_Buffer_With_Stereo_Engine_Throes()
+    public void Fill_Mono_Buffer_With_Stereo_Engine_Generates_Mixed_Signal()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       engine.Start();
 
       var buffer = new float[AudioSettings.RecommendedBufferSize / 4];
+      engine.FillMonoBuffer(buffer);
 
-      Assert.Throws<InvalidOperationException>(() =>
-        engine.FillMonoBuffer(buffer)
-      );
+      Assert.True(MaxAbs(buffer) > 1e-6f);
     }
 
     [Fact]
-    public void Fill_Stereo_Buffer_With_Mono_Engine_Throws()
+    public void Fill_Stereo_Buffer_With_Mono_Engine_Generates_Identical_Channels()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Mono);
+      engine.Initialize([_config], ChannelMode.Mono);
       engine.Start();
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
       var rightBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
+      engine.FillStereoBuffer(leftBuffer, rightBuffer);
 
-      Assert.Throws<InvalidOperationException>(() =>
-        engine.FillStereoBuffer(leftBuffer, rightBuffer)
-      );
+      for (var i = 0; i < leftBuffer.Length; i++)
+        Assert.Equal(leftBuffer[i], rightBuffer[i], 1e-6f);
     }
 
     [Fact]
     public void Fill_Stereo_Buffer_With_Mismatched_Buffer_Sizes_Throws()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       engine.Start();
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -159,7 +160,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Fill_Stereo_Buffer_Not_Playing_Clears_Both_Buffers()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 8];
       var rightBuffer = new float[AudioSettings.RecommendedBufferSize / 8];
@@ -173,9 +174,9 @@ namespace ToneSync.Core.Tests.Engine
     }
 
     [Fact]
-    public void Mono_Layer_In_Stereo_Mode_Produces_Identical_Channels()
+    public void Mono_Layer_In_Stereo_Mode_Generates_Identical_Channels()
     {
-      var config = ActiveConfig() with
+      var config = _config with
       {
         ChannelMode = ChannelMode.Mono,
         Pan = 0f
@@ -196,14 +197,14 @@ namespace ToneSync.Core.Tests.Engine
     [Fact]
     public void Mono_Layer_Panned_Left_Attenuates_Right_Channel()
     {
-      var config = ActiveConfig() with
+      var config = _config with
       {
         ChannelMode = ChannelMode.Mono,
         Pan = -1f
       };
 
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([config], ChannelMode.Mono);
+      engine.Initialize([config], ChannelMode.Stereo);
       engine.Start();
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -219,7 +220,7 @@ namespace ToneSync.Core.Tests.Engine
     [Fact]
     public void Mono_Layer_Panned_Right_Attenuates_Left_Channel()
     {
-      var config = ActiveConfig() with
+      var config = _config with
       {
         ChannelMode = ChannelMode.Mono,
         Pan = 1f
@@ -242,7 +243,7 @@ namespace ToneSync.Core.Tests.Engine
     [Fact]
     public void Stereo_Layer_With_Frequency_Offset_Produces_Different_Channels()
     {
-      var config = ActiveConfig() with
+      var config = _config with
       {
         ChannelMode = ChannelMode.Stereo,
         StereoFrequencyOffset = 10f
@@ -271,7 +272,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Fill_Mono_Buffer_Always_Clamps_Output()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       engine.Start();
       engine.SetMasterGain(1f);
       engine.OutputGain = 1f;
@@ -288,7 +289,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Fill_Stereo_Buffer_Always_Clamps_Output()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       engine.Start();
       engine.SetMasterGain(1f);
       engine.OutputGain = 1f;
@@ -306,10 +307,10 @@ namespace ToneSync.Core.Tests.Engine
     [Fact]
     public void Output_Gain_Scales_Signal()
     {
-      static float RenderWithGain(float gain)
+      float RenderWithGain(float gain)
       {
         var engine = new AudioEngine(AudioSettings.SampleRate);
-        engine.Initialize([ActiveConfig()]);
+        engine.Initialize([_config]);
         engine.SetMasterGain(1.0f);
         engine.OutputGain = gain;
         engine.Start();
@@ -331,7 +332,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Master_Gain_Is_Smoothed_Not_Instant()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       engine.Start();
 
       var bufferA = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -351,7 +352,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Stop_Silences_Subsequent_Mono_Buffers()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       engine.Start();
 
       var buffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -367,7 +368,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Stop_Silences_Subsequent_Stereo_Buffers()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       engine.Start();
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -385,7 +386,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Reset_Silences_Engine()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       engine.Start();
 
       var buffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -401,7 +402,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Dispose_Prevents_Further_Mono_Use()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()]);
+      engine.Initialize([_config]);
       engine.Dispose();
 
       Assert.Throws<ObjectDisposedException>(() =>
@@ -413,7 +414,7 @@ namespace ToneSync.Core.Tests.Engine
     public void Dispose_Prevents_Further_Stereo_Use()
     {
       var engine = new AudioEngine(AudioSettings.SampleRate);
-      engine.Initialize([ActiveConfig()], ChannelMode.Stereo);
+      engine.Initialize([_config], ChannelMode.Stereo);
       engine.Dispose();
 
       var leftBuffer = new float[AudioSettings.RecommendedBufferSize / 4];
@@ -423,23 +424,6 @@ namespace ToneSync.Core.Tests.Engine
           engine.FillStereoBuffer(leftBuffer, rightBuffer)
       );
     }
-
-    private static LayerConfiguration ActiveConfig(
-      float carrHz = 440f,
-      float modHz = 2f,
-      float modDepth = 1f,
-      float weight = 1f
-    ) => new()
-    {
-      IsActive = true,
-      CarrierFrequency = carrHz,
-      ModulatorFrequency = modHz,
-      ModulatorDepth = modDepth,
-      Weight = weight,
-      ChannelMode = ChannelMode.Mono,
-      StereoFrequencyOffset = 0f,
-      Pan = 0f
-    };
 
     private static float MaxAbs(float[] buffer)
     {

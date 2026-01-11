@@ -4,22 +4,7 @@ namespace ToneSync.Core.Tests.Layers
 {
   public sealed class MonoLayerTests
   {
-    [Fact]
-    public void Inactive_Layer_Outputs_Silence()
-    {
-      var layer = new MonoLayer();
-      layer.Initialize(AudioSettings.SampleRate, 0.1f, 0.1f);
-
-      var buffer = new float[AudioSettings.RecommendedBufferSize / 2];
-      layer.UpdateAndProcess(
-        buffer,
-        AudioSettings.SampleRate,
-        InactiveConfig()
-      );
-
-      foreach (var sample in buffer)
-        Assert.Equal(0f, sample);
-    }
+    private readonly LayerConfiguration _config = new(440f, 2f, 1f, 1f);
 
     [Fact]
     public void Active_Layer_Writes_Entire_Buffer()
@@ -33,7 +18,7 @@ namespace ToneSync.Core.Tests.Layers
       layer.UpdateAndProcess(
         buffer,
         AudioSettings.SampleRate,
-        ActiveConfig()
+        _config
       );
 
       foreach (var sample in buffer)
@@ -51,7 +36,7 @@ namespace ToneSync.Core.Tests.Layers
       layer.UpdateAndProcess(
         buffer,
         AudioSettings.SampleRate,
-        ActiveConfig()
+        _config
       );
 
       Assert.True(layer.CurrentEnvelopeValue > 0f);
@@ -66,8 +51,8 @@ namespace ToneSync.Core.Tests.Layers
       var bufferNoAM = new float[AudioSettings.RecommendedBufferSize];
       var bufferAM = new float[AudioSettings.RecommendedBufferSize];
 
-      var noAmConfig = ActiveConfig(modHz: 0f, modDepth: 0f);
-      var amConfig = ActiveConfig(modHz: 5f, modDepth: 1f);
+      var noAmConfig = new LayerConfiguration(440f, 0f, 0f, 1f);
+      var amConfig = new LayerConfiguration(440, 5f, 1f, 1f);
 
       layer.UpdateAndProcess(bufferNoAM, AudioSettings.SampleRate, noAmConfig);
       layer.Reset();
@@ -90,7 +75,7 @@ namespace ToneSync.Core.Tests.Layers
       layer.UpdateAndProcess(
         buffer,
         AudioSettings.SampleRate,
-        ActiveConfig(weight: 0f)
+        new LayerConfiguration(440, 2f, 1f, 0f)
       );
 
       foreach (var sample in buffer)
@@ -110,7 +95,7 @@ namespace ToneSync.Core.Tests.Layers
         layer.UpdateAndProcess(
           buffer,
           AudioSettings.SampleRate,
-          ActiveConfig()
+          _config
         );
 
         foreach (var sample in buffer)
@@ -131,7 +116,7 @@ namespace ToneSync.Core.Tests.Layers
       layer.UpdateAndProcess(
         buffer,
         AudioSettings.SampleRate,
-        ActiveConfig()
+        _config
       );
 
       Assert.True(layer.CurrentEnvelopeValue > 0f);
@@ -158,37 +143,17 @@ namespace ToneSync.Core.Tests.Layers
         layerA.UpdateAndProcess(
           bufferA,
           AudioSettings.SampleRate,
-          ActiveConfig()
+          _config
         );
         layerB.UpdateAndProcess(
           bufferB,
           AudioSettings.SampleRate,
-          ActiveConfig()
+          _config
         );
 
         for (var j = 0; j < bufferA.Length; j++)
           Assert.Equal(bufferA[j], bufferB[j], 1e-6f);
       }
     }
-
-    private static LayerConfiguration ActiveConfig(
-      float carrHz = 440f,
-      float modHz = 2f,
-      float modDepth = 1f,
-      float weight = 1f
-    ) => new()
-    {
-      IsActive = true,
-      CarrierFrequency = carrHz,
-      ModulatorFrequency = modHz,
-      ModulatorDepth = modDepth,
-      Weight = weight,
-      ChannelMode = ChannelMode.Mono,
-      StereoFrequencyOffset = 0f,
-      Pan = 0f
-    };
-
-    private static LayerConfiguration InactiveConfig() =>
-      new() { IsActive = false };
   }
 }

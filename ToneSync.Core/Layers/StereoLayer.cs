@@ -42,24 +42,26 @@
       LayerConfiguration config
     )
     {
-      if (!config.IsActive)
-      {
-        leftBuffer.Clear();
-        rightBuffer.Clear();
-        return;
-      }
+      leftBuffer.Clear();
+      rightBuffer.Clear();
 
       // Create left channel configuration
-      LayerConfiguration leftConfig = config with
-      {
-        CarrierFrequency = config.CarrierFrequency
-      };
+      LayerConfiguration leftConfig = new(
+        config.CarrierFrequency,
+        config.ModulatorFrequency,
+        config.ModulatorDepth,
+        config.Weight,
+        ChannelMode.Stereo
+      );
 
       // Create right channel configuration with frequency offset
-      LayerConfiguration rightConfig = config with
-      {
-        CarrierFrequency = config.CarrierFrequency + config.StereoFrequencyOffset
-      };
+      LayerConfiguration rightConfig = new LayerConfiguration(
+        config.CarrierFrequency + config.StereoFrequencyOffset,
+        config.ModulatorFrequency,
+        config.ModulatorDepth,
+        config.Weight,
+        ChannelMode.Stereo
+      );
 
       // Render both channels independently
       _leftChannel.UpdateAndProcess(leftBuffer, sampleRate, leftConfig);
